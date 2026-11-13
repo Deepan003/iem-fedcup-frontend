@@ -1,0 +1,101 @@
+/* ============================ FOOTBALL LAYER ==============================
+   Landing-page-only effects (imported by pages/Landing.jsx).
+   ========================================================================== */
+
+/* Match clock: scroll progress as 00'–90' with a ball rolling along the touchline */
+.match-clock { position: fixed; left: var(--pad); bottom: calc(18px + var(--safe-b)); z-index: 60; display: flex; align-items: center; gap: 14px; padding: 8px 14px 8px 8px; background: rgba(11, 11, 12, 0.88); border: 1px solid var(--rule-2); border-radius: 3px; opacity: 0; transform: translateY(16px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); pointer-events: none; --p: 0; }
+.match-clock.show { opacity: 1; transform: none; }
+.mc-time { display: flex; align-items: center; justify-content: center; padding: 4px 10px; background: var(--grad-signal); color: var(--ink); font-family: var(--display); font-weight: 900; font-size: 22px; line-height: 1; border-radius: 2px; min-width: 64px; font-variant-numeric: tabular-nums; }
+.mc-half { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); white-space: nowrap; min-width: 66px; }
+.mc-track { position: relative; width: 150px; height: 18px; }
+.mc-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--rule-2); }
+.mc-track::after { content: ""; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 1px; background: var(--rule-2); }
+.mc-fill { position: absolute; left: 0; top: 50%; height: 2px; margin-top: -1px; width: 100%; background: var(--grad-signal); transform-origin: left; transform: scaleX(var(--p)); }
+.mc-ball { position: absolute; top: 50%; left: calc(var(--p) * 100%); width: 16px; height: 16px; transform: translate(-50%, -50%) rotate(calc(var(--p) * 1440deg)); }
+@media (max-width: 760px) {
+  .match-clock { left: 50%; transform: translate(-50%, 16px); padding: 6px 10px 6px 6px; gap: 10px; }
+  .match-clock.show { transform: translate(-50%, 0); }
+  .mc-track { width: 90px; }
+  .mc-time { font-size: 18px; min-width: 52px; }
+}
+
+/* Kick-off scroll cue */
+.kickoff { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; z-index: 2; }
+.kickoff .ball { width: 18px; height: 18px; animation: ball-bounce 1.6s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
+.kickoff .shadow { width: 16px; height: 4px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); animation: ball-shadow 1.6s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
+@keyframes ball-bounce { 0%, 100% { transform: translateY(-16px) rotate(0deg); } 50% { transform: translateY(0) rotate(180deg) scaleY(0.9); } }
+@keyframes ball-shadow { 0%, 100% { transform: scaleX(0.55); opacity: 0.35; } 50% { transform: scaleX(1.1); opacity: 0.9; } }
+@media (max-width: 860px) { .kickoff { display: none; } }
+
+/* Pitch that draws itself behind the manifesto */
+.pitch-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; perspective: 1400px; }
+.pitch-bg svg { position: absolute; left: 50%; top: 50%; width: min(140%, 1500px); transform: translate(-50%, -46%) rotateX(52deg) scale(1.05); opacity: 0.22; overflow: visible; }
+.pitch-bg .pl { fill: none; stroke: var(--bone); stroke-width: 1.6; }
+.pitch-bg .pass { fill: none; stroke: url(#passGrad); stroke-width: 3; stroke-linecap: round; }
+.pitch-bg .pball { fill: var(--bone); }
+.manifesto { position: relative; z-index: 1; }
+
+/* LED pitch-side boards */
+.ticker.led { background: #060606; border-block: 1px solid #1c1c1f; }
+.ticker.led::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, transparent 0 1.05px, rgba(6, 6, 6, 0.85) 1.35px) 0 0 / 4px 4px; }
+.ticker.led .ticker-track { padding: 12px 0; animation-duration: 40s; }
+.ticker.led .ticker-track span { font-family: var(--display); font-weight: 900; font-size: clamp(26px, 3.4vw, 44px); letter-spacing: 0.04em; color: #ffc04a; text-shadow: 0 0 10px rgba(255, 150, 40, 0.75); }
+.ticker.led .ticker-track b { background: none; color: #ff2d55; -webkit-text-fill-color: #ff2d55; text-shadow: 0 0 10px rgba(255, 30, 80, 0.8); }
+.ticker.led.rev .ticker-track { animation-direction: reverse; }
+.ticker.led.rev .ticker-track span { color: #f4f1ea; text-shadow: 0 0 10px rgba(255, 255, 255, 0.45); }
+
+/* Grass-mowing stripe wipe */
+.mow { position: absolute; inset: 0; z-index: 5; display: grid; grid-template-columns: repeat(10, 1fr); pointer-events: none; }
+.mow i { background: var(--ink); will-change: transform; }
+.mow i:nth-child(odd) { background: #0f0f11; }
+
+/* Split-flap stadium scoreboard */
+.flap-board { display: inline-flex; gap: 0.05em; }
+.flap-cell { position: relative; display: inline-block; width: 0.62em; text-align: center; background: linear-gradient(180deg, #1c1c1f 0 50%, #141416 50% 100%); border-radius: 0.05em; perspective: 300px; overflow: hidden; line-height: 1.04; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 18px 30px -18px rgba(0, 0, 0, 0.7); }
+.flap-cell::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: rgba(0, 0, 0, 0.8); }
+.flap { display: block; transform-origin: 50% 50%; animation: flap 0.18s ease-out; background: var(--grad-bone); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@keyframes flap { from { transform: rotateX(-88deg); opacity: 0.4; } }
+.stats b.flapper { background: none; -webkit-text-fill-color: initial; color: inherit; font-size: clamp(64px, 9vw, 150px); }
+
+/* Tactics board */
+.tactics { position: relative; height: 100svh; overflow: hidden; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; gap: clamp(20px, 4vw, 60px); padding: 80px var(--pad) 40px; background: radial-gradient(70% 60% at 75% 55%, rgba(30, 120, 60, 0.18), transparent 70%), var(--ink); }
+.tac-copy { position: relative; min-height: 360px; }
+.tac-cap { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; opacity: 0; }
+.tac-cap:first-child { opacity: 1; }
+.tac-cap p { color: var(--bone-3); max-width: 420px; font-size: 16px; }
+.tac-cap .big-title { font-size: clamp(48px, 7vw, 120px); }
+.tac-stage { position: relative; height: 100%; display: grid; place-items: center; perspective: 1600px; }
+.tac-pitch { position: relative; height: min(76svh, 760px); aspect-ratio: 68 / 105; transform-style: preserve-3d; border-radius: 2px;
+  background: repeating-linear-gradient(180deg, #134425 0 9.52%, #103a1f 9.52% 19.04%);
+  box-shadow: 0 60px 120px -40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.tac-pitch .lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.tac-pitch .lines .pl { fill: none; stroke: rgba(239, 235, 227, 0.75); stroke-width: 2.4; }
+.tac-pitch .lines .goal { fill: none; stroke: rgba(239, 235, 227, 0.95); stroke-width: 3; }
+.tac-pitch .passes { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; z-index: 1; }
+.tac-pitch .passes line { stroke: #ffd84a; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.8)); }
+.tok { position: absolute; left: 50%; top: 108%; width: 9%; aspect-ratio: 1; opacity: 0; z-index: 2; }
+.tok .face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: var(--grad-signal); border: 2px solid var(--bone); display: grid; place-items: center; font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--ink); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5); }
+.tok .face img { width: 100%; height: 100%; object-fit: cover; }
+.tok .pos { position: absolute; left: 50%; top: 106%; transform: translateX(-50%); font-family: var(--mono); font-size: 8.5px; font-weight: 600; letter-spacing: 0.08em; background: rgba(0, 0, 0, 0.72); padding: 0 4px; white-space: nowrap; }
+.tac-ball { position: absolute; left: 50%; top: 88%; width: 3.6%; aspect-ratio: 1; z-index: 3; opacity: 0; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6)); }
+.tac-ball svg { width: 100%; height: 100%; display: block; }
+.tac-goal-glow { position: absolute; left: 50%; top: -3%; width: 34%; height: 9%; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(255, 216, 74, 0.95), transparent); opacity: 0; filter: blur(4px); z-index: 1; }
+@media (max-width: 860px) {
+  .tactics { grid-template-columns: 1fr; grid-template-rows: auto 1fr; padding: 84px var(--pad) 24px; gap: 8px; }
+  .tac-copy { min-height: 180px; }
+  .tac-cap p { font-size: 14px; }
+  .tac-pitch { height: min(58svh, 560px); }
+  .tok .pos { display: none; }
+}
+
+/* Jersey-flip club cards */
+.teams-grid .team-tile { perspective: 1000px; padding: 0; min-height: 280px; display: block; cursor: pointer; }
+.teams-grid .team-tile::before { display: none; }
+.tile-inner { position: relative; height: 100%; min-height: 280px; transform-style: preserve-3d; transition: transform 0.9s var(--ease); }
+.team-tile.flipped .tile-inner { transform: rotateY(180deg); }
+@media (hover: hover) { .team-tile:hover .tile-inner { transform: rotateY(180deg); } }
+.tile-face { position: absolute; inset: 0; padding: 24px 22px; display: flex; flex-direction: column; justify-content: space-between; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.tile-back { transform: rotateY(180deg); background: var(--c); color: var(--fg); align-items: center; justify-content: center; text-align: center; gap: 6px; }
+.tile-back::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0 14px, transparent 14px 28px); }
+.tile-back svg { width: 56%; max-width: 160px; position: relative; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.35)); }
+.tile-back .kit-name { position: relative; font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: 22px; letter-spacing: 0.06em; }

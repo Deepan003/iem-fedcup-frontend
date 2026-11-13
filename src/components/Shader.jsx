@@ -29,7 +29,7 @@ float beam(vec2 p, vec2 o, float ang, float w){
   float a = atan(d.x, -d.y);
   float q = (a - ang) / w;
   float k = exp(-q * q);
-  return k * smoothstep(2.2, 0.0, length(d));
+  return k * (1.0 - smoothstep(0.0, 2.2, length(d)));
 }
 void main(){
   vec2 uv = gl_FragCoord.xy / r;
@@ -58,7 +58,7 @@ void main(){
     vec2 g = vec2((uv.x - 0.5) * asp * z * 1.6, z + t * 0.22);
     vec2 gl = abs(fract(g) - 0.5);
     float line = smoothstep(0.47, 0.5, max(gl.x, gl.y));
-    float fade = smoothstep(hor, 0.0, uv.y) * smoothstep(0.0, 0.12, hor - uv.y);
+    float fade = (1.0 - smoothstep(0.0, hor, uv.y)) * smoothstep(0.0, 0.12, hor - uv.y);
     col += mix(warm, sig, 0.45) * line * fade * 0.2;
   }
 
@@ -67,7 +67,7 @@ void main(){
   float glow = exp(-gd * gd * 1.6);
   col += mix(sig, gold, uv.x) * glow * 0.3;
 
-  float vig = smoothstep(1.25, 0.25, length((uv - 0.5) * vec2(asp * 0.75, 1.0)));
+  float vig = 1.0 - smoothstep(0.25, 1.25, length((uv - 0.5) * vec2(asp * 0.75, 1.0)));
   col *= mix(0.55, 1.0, vig);
   col += (hash(gl_FragCoord.xy + fract(t) * 91.0) - 0.5) * 0.05;
 
@@ -82,7 +82,9 @@ export default function Shader({ className = 'hero-canvas', intensity = 1 }) {
   useEffect(() => {
     const canvas = ref.current;
     const gl = canvas?.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
-    if (!gl) return undefined;
+    const hide = () => { if (canvas) canvas.style.display = 'none'; };
+    if (!gl) { hide(); return undefined; }
+    canvas.addEventListener('webglcontextlost', hide);
 
     const compile = (type, src) => {
       const sh = gl.createShader(type);
@@ -94,7 +96,7 @@ export default function Shader({ className = 'hero-canvas', intensity = 1 }) {
     gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
     gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
     gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return undefined;
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { hide(); return undefined; }
     gl.useProgram(prog);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);

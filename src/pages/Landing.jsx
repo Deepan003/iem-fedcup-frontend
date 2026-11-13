@@ -4,18 +4,230 @@ import {
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import Lenis from 'lenis';
-import { api, API_URL } from '../lib/api.js';
-import { onColor } from '../lib/format.js';
+import { api, API_URL, assetUrl } from '../lib/api.js';
+import { initials, onColor } from '../lib/format.js';
 import Shader from '../components/Shader.jsx';
 import { Magnetic, RollingNumber } from '../components/fx.jsx';
 import { MiniPlayer, PlayerCard, TeamLogo } from '../components/ui.jsx';
+import '../football.css';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
+
+/* ------------------------------------------------------------------------- */
+/* Small football graphics                                                   */
+/* ------------------------------------------------------------------------- */
+
+function Ball({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="15" fill="#f4f1ea" stroke="#0b0b0c" strokeWidth="1.2" />
+      <path d="M16 9.5l5.4 3.9-2.1 6.4h-6.6l-2.1-6.4z" fill="#0b0b0c" />
+      <path d="M16 1v8.5M21.4 13.4l8-2.6M19.3 19.8l5 6.8M12.7 19.8l-5 6.8M10.6 13.4l-8-2.6" stroke="#0b0b0c" strokeWidth="1.2" />
+      <path d="M2.2 10.6l2.6 1.4-.4 4.6-3-1.2zM29.8 10.6l-2.6 1.4.4 4.6 3-1.2zM9 27.5l3-1.6 3.4 1.6-1 3.2zM23 27.5l-3-1.6-3.4 1.6 1 3.2zM13.2 1.6l2.8 1.6 2.8-1.6" fill="#0b0b0c" />
+    </svg>
+  );
+}
+
+function Jersey({ color, text, number }) {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M33 8 L44 4 Q50 11 56 4 L67 8 L92 24 L82 42 L72 36 L72 95 L28 95 L28 36 L18 42 L8 24 Z" fill={color} stroke="rgba(0,0,0,.35)" strokeWidth="1.5" />
+      <path d="M44 4 Q50 11 56 4" fill="none" stroke="rgba(0,0,0,.35)" strokeWidth="2" />
+      <text x="50" y="40" textAnchor="middle" fontFamily="Big Shoulders Display, Impact, sans-serif" fontWeight="900" fontSize="9" fill={text} letterSpacing="1">{(number.label || '').toUpperCase().slice(0, 12)}</text>
+      <text x="50" y="76" textAnchor="middle" fontFamily="Big Shoulders Display, Impact, sans-serif" fontWeight="900" fontSize="34" fill={text}>{number.n}</text>
+    </svg>
+  );
+}
+
+/** Scroll progress as a match clock: 00' → 90' with a ball rolling the touchline. */
+function MatchClock() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    const min = el.querySelector('.mc-time');
+    const half = el.querySelector('.mc-half');
+    const st = ScrollTrigger.create({
+      start: 0,
+      end: 'max',
+      onUpdate: (self) => {
+        const p = self.progress;
+        const m = Math.round(p * 90);
+        el.style.setProperty('--p', p.toFixed(4));
+        min.textContent = `${String(m).padStart(2, '0')}'`;
+        half.textContent = p >= 0.995 ? 'Full time' : m >= 44 && m <= 46 ? 'Half time' : m < 45 ? '1st half' : '2nd half';
+        el.classList.toggle('show', p > 0.04);
+      },
+    });
+    return () => st.kill();
+  }, []);
+  return (
+    <div className="match-clock" ref={ref} aria-hidden="true">
+      <span className="mc-time">00'</span>
+      <span className="mc-half">1st half</span>
+      <span className="mc-track"><span className="mc-fill" /><Ball className="mc-ball" /></span>
+    </div>
+  );
+}
+
+/** Full-size pitch (105 × 68 m, ×10) that draws itself, with a curling pass. */
+function PitchLines() {
+  return (
+    <div className="pitch-bg" aria-hidden="true">
+      <svg viewBox="-20 -20 1090 720">
+        <defs>
+          <linearGradient id="passGrad" x1="0" x2="1">
+            <stop offset="0" stopColor="#e3123f" />
+            <stop offset="1" stopColor="#ffd84a" />
+          </linearGradient>
+        </defs>
+        <rect className="pl" x="0" y="0" width="1050" height="680" pathLength="1" />
+        <line className="pl" x1="525" y1="0" x2="525" y2="680" pathLength="1" />
+        <circle className="pl" cx="525" cy="340" r="91.5" pathLength="1" />
+        <rect className="pl" x="0" y="138.5" width="165" height="403" pathLength="1" />
+        <rect className="pl" x="885" y="138.5" width="165" height="403" pathLength="1" />
+        <rect className="pl" x="0" y="248.4" width="55" height="183.2" pathLength="1" />
+        <rect className="pl" x="995" y="248.4" width="55" height="183.2" pathLength="1" />
+        <path className="pl" d="M165 266.9 A91.5 91.5 0 0 1 165 413.1" pathLength="1" />
+        <path className="pl" d="M885 266.9 A91.5 91.5 0 0 0 885 413.1" pathLength="1" />
+        <path className="pl" d="M0 10 A10 10 0 0 0 10 0 M1040 0 A10 10 0 0 0 1050 10 M1050 670 A10 10 0 0 0 1040 680 M10 680 A10 10 0 0 0 0 670" pathLength="1" />
+        <path id="passPath" className="pass" d="M140 560 C 300 470, 360 210, 525 300 S 760 560, 990 340" pathLength="1" />
+        <circle className="pball" cx="0" cy="0" r="9" />
+      </svg>
+    </div>
+  );
+}
+
+/** Split-flap stadium scoreboard digits. */
+function Flap({ value }) {
+  const ref = useRef(null);
+  const [shown, setShown] = useState(0);
+  const [run, setRun] = useState(false);
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setRun(true); }, { threshold: 0.5 });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!run) return undefined;
+    let raf = 0;
+    let start = 0;
+    let last = 0;
+    const dur = 1500;
+    const step = (t) => {
+      if (!start) start = t;
+      const p = Math.min(1, (t - start) / dur);
+      if (t - last > 70 || p === 1) {
+        last = t;
+        setShown(Math.round((1 - (1 - p) ** 3) * value));
+      }
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [run, value]);
+  const digits = String(shown).padStart(2, '0').split('');
+  return (
+    <span className="flap-board" ref={ref} aria-label={String(value)}>
+      {digits.map((d, i) => (
+        // eslint-disable-next-line react/no-array-index-key
+        <span key={i} className="flap-cell"><span key={d} className="flap">{d}</span></span>
+      ))}
+    </span>
+  );
+}
+
+function LedBoard({ items, reverse = false }) {
+  return (
+    <div className={`ticker led ${reverse ? 'rev' : ''}`} aria-hidden="true">
+      <div className="ticker-track">
+        {[0, 1].map((k) => (
+          <span key={k}>{items.map((t) => <span key={t}>{t}<b>●</b></span>)}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* 4-3-3, attacking upward. Coordinates are % of the pitch. */
+const XI = [
+  ['GK', 50, 90], ['LB', 15, 71], ['CB', 37, 76], ['CB', 63, 76], ['RB', 85, 71],
+  ['CM', 29, 52], ['CM', 50, 57], ['CM', 71, 52], ['LW', 17, 27], ['ST', 50, 19], ['RW', 83, 27],
+];
+const MOVE = [0, 3, 4, 7, 6, 8, 9]; // GK → CB → RB → CM → CM → LW → ST → goal
+const GOAL = [50, 0.5];
+
+function Tactics({ players }) {
+  const faces = useMemo(() => {
+    const withPhoto = players.filter((p) => p.thumbUrl || p.photoUrl);
+    return XI.map((_, i) => withPhoto[i] || players[i] || null);
+  }, [players]);
+  return (
+    <section className="tactics">
+      <div className="tac-copy">
+        <div className="tac-cap">
+          <span className="idx">38' — The tactics board</span>
+          <h2 className="big-title">Eleven<br /><em>spots.</em></h2>
+          <p>Every squad starts as an empty team sheet. Defenders, midfielders, forwards, a keeper: the order the players come up is the order the board fills.</p>
+        </div>
+        <div className="tac-cap">
+          <span className="idx">38' — Take shape</span>
+          <h2 className="big-title">Fill them<br /><em>live.</em></h2>
+          <p>Each captain gets a private tactics board. Every player they buy drops straight into the formation while the auction is still running.</p>
+        </div>
+        <div className="tac-cap">
+          <span className="idx">38' — Play it forward</span>
+          <h2 className="big-title">Plan the<br /><em>move.</em></h2>
+          <p>Swap formations, shuffle the bench and see exactly which positions still need a name before the next bid.</p>
+        </div>
+      </div>
+      <div className="tac-stage">
+        <div className="tac-pitch">
+          <svg className="lines" viewBox="0 0 680 1050" preserveAspectRatio="none" aria-hidden="true">
+            <rect className="pl" x="0" y="0" width="680" height="1050" pathLength="1" />
+            <line className="pl" x1="0" y1="525" x2="680" y2="525" pathLength="1" />
+            <circle className="pl" cx="340" cy="525" r="91.5" pathLength="1" />
+            <rect className="pl" x="138.5" y="0" width="403" height="165" pathLength="1" />
+            <rect className="pl" x="138.5" y="885" width="403" height="165" pathLength="1" />
+            <rect className="pl" x="248.4" y="0" width="183.2" height="55" pathLength="1" />
+            <rect className="pl" x="248.4" y="995" width="183.2" height="55" pathLength="1" />
+            <path className="pl" d="M266.9 165 A91.5 91.5 0 0 0 413.1 165" pathLength="1" />
+            <path className="pl" d="M266.9 885 A91.5 91.5 0 0 1 413.1 885" pathLength="1" />
+            <rect className="goal" x="303.4" y="-26" width="73.2" height="26" pathLength="1" />
+          </svg>
+          <span className="tac-goal-glow" />
+          <svg className="passes" viewBox="0 0 680 1050" aria-hidden="true">
+            {MOVE.map((from, i) => {
+              const a = XI[from];
+              const b = i < MOVE.length - 1 ? XI[MOVE[i + 1]] : [null, ...GOAL];
+              return <line key={from} x1={a[1] * 6.8} y1={a[2] * 10.5} x2={b[1] * 6.8} y2={b[2] * 10.5} pathLength="1" />;
+            })}
+          </svg>
+          {XI.map(([pos], i) => {
+            const p = faces[i];
+            const url = p && assetUrl(p.thumbUrl || p.photoUrl);
+            return (
+              // eslint-disable-next-line react/no-array-index-key
+              <div key={i} className="tok">
+                <span className="face">{url ? <img src={url} alt="" loading="lazy" /> : (p ? initials(p.name) : pos)}</span>
+                <span className="pos">{pos}</span>
+              </div>
+            );
+          })}
+          <span className="tac-ball"><Ball /></span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* Hero crest + intro (unchanged behaviour)                                  */
+/* ------------------------------------------------------------------------- */
 
 const SPARKS = [[10, 18, 0], [16, 32, 0.7], [22, 46, 1.3], [8, 38, 2], [88, 18, 0.4], [82, 32, 1.1], [76, 46, 1.8], [91, 38, 0.2]];
 
-/** Animated crest: trophy rises, wings spread and flap, stars drop, sparkles twinkle. */
 function Crest() {
   return (
     <div className="crest" aria-label="IEM FED Cup crest" role="img">
@@ -39,7 +251,6 @@ function Intro({ onReveal }) {
   const revealed = useRef(false);
   const onRevealRef = useRef(onReveal);
   onRevealRef.current = onReveal;
-  // Runs once: page re-renders (data arriving) must not restart the sequence.
   useLayoutEffect(() => {
     const el = ref.current;
     const reveal = () => {
@@ -95,6 +306,10 @@ function Lines({ lines, className = '', as: Tag = 'h2' }) {
   );
 }
 
+function Mow() {
+  return <div className="mow" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i} />)}</div>;
+}
+
 const MANIFESTO = 'Five seasons. One trophy. Every captain starts with the same purse — and every player walks onto the block with a price on their name. Bids land in milliseconds, the hammer waits for the auctioneer, and squads are built live in front of the whole campus.';
 const HL = new Set(['trophy.', 'same', 'purse', 'milliseconds,', 'hammer', 'live']);
 
@@ -114,6 +329,7 @@ export default function Landing() {
   const [showIntro] = useState(() => !sessionStorage.getItem('fedcup.intro'));
   const [ready, setReady] = useState(!showIntro);
   const [scenePrice, setScenePrice] = useState(40);
+  const [flipped, setFlipped] = useState(null);
 
   useEffect(() => {
     sessionStorage.setItem('fedcup.intro', '1');
@@ -152,8 +368,16 @@ export default function Landing() {
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const mm = gsap.matchMedia();
+      gsap.set('.tok, .tac-ball', { xPercent: -50, yPercent: -50 });
       mm.add({ motion: '(prefers-reduced-motion: no-preference)', desktop: '(min-width: 761px)' }, ({ conditions }) => {
-        if (!conditions.motion) return;
+        if (!conditions.motion) {
+          // Reduced motion: show the finished formation and fully lit text, no scrubbing.
+          gsap.utils.toArray('.tok').forEach((t, i) => gsap.set(t, { left: `${XI[i][1]}%`, top: `${XI[i][2]}%`, opacity: 1, scale: 1 }));
+          gsap.set('.manifesto .w', { opacity: 1 });
+          gsap.set('.split-sect .mow', { display: 'none' });
+          return;
+        }
+        gsap.set('.tok', { scale: 0.4 });
 
         // Hero: crest lifts, title sinks, floodlights scale up as you leave.
         gsap.timeline({ scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } })
@@ -164,43 +388,34 @@ export default function Landing() {
 
         // Big titles rise line by line.
         gsap.utils.toArray('.lines').forEach((el) => {
+          if (el.closest('.tactics')) return;
           gsap.from(el.querySelectorAll('.line > span'), {
             yPercent: 110, rotate: 2, duration: 1.2, ease: 'expo.out', stagger: 0.08,
             scrollTrigger: { trigger: el, start: 'top 88%' },
           });
         });
 
-        // Generic fade-ups.
         ScrollTrigger.batch('[data-up]', {
           start: 'top 90%',
           onEnter: (els) => gsap.fromTo(els, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1, ease: 'expo.out', stagger: 0.08, overwrite: true }),
         });
 
-        // Manifesto words light up with the scroll.
-        gsap.to('.manifesto .w', {
-          opacity: 1, ease: 'none', stagger: 0.05,
-          scrollTrigger: { trigger: '.manifesto', start: 'top 78%', end: 'bottom 45%', scrub: true },
+        // 00' — the pitch draws itself while the manifesto lights up; a pass curls across.
+        const draw = gsap.timeline({ scrollTrigger: { trigger: '.manifesto-sect', start: 'top 85%', end: 'bottom 35%', scrub: 0.6 } });
+        draw.fromTo('.pitch-bg .pl', { strokeDasharray: 1, strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: 'none', stagger: 0.04, duration: 1 }, 0)
+          .fromTo('.pitch-bg .pass', { strokeDasharray: 1, strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: 'none', duration: 0.8 }, 0.35)
+          .to('.pitch-bg .pball', { motionPath: { path: '#passPath', align: '#passPath', alignOrigin: [0.5, 0.5] }, ease: 'none', duration: 0.8 }, 0.35)
+          .to('.manifesto .w', { opacity: 1, ease: 'none', stagger: 0.03, duration: 0.6 }, 0);
+
+        // 15' — grass-mowing stripes reveal the scoreboard section.
+        gsap.to('.split-sect .mow i', {
+          scaleY: 0, ease: 'none',
+          transformOrigin: (i) => (i % 2 ? '50% 100%' : '50% 0%'),
+          stagger: { each: 0.06, from: 'center' },
+          scrollTrigger: { trigger: '.split-sect', start: 'top 95%', end: 'top 25%', scrub: 0.5 },
         });
 
-        // Bone section opens like a split screen; counters run once.
-        gsap.fromTo('.split-sect', { clipPath: 'inset(14% 8% 14% 8%)' }, {
-          clipPath: 'inset(0% 0% 0% 0%)', ease: 'none',
-          scrollTrigger: { trigger: '.split-sect', start: 'top bottom', end: 'top 20%', scrub: true },
-        });
-        gsap.utils.toArray('[data-count]').forEach((el) => {
-          ScrollTrigger.create({
-            trigger: el,
-            start: 'top 85%',
-            once: true,
-            onEnter: () => {
-              const target = Number(el.dataset.count) || 0;
-              const o = { v: 0 };
-              gsap.to(o, { v: target, duration: 1.8, ease: 'expo.out', onUpdate: () => { el.textContent = String(Math.round(o.v)).padStart(2, '0'); } });
-            },
-          });
-        });
-
-        // Horizontal "how a lot runs" (desktop): pinned and scrubbed sideways.
+        // 30' — horizontal sequence (desktop): pinned and scrubbed sideways.
         if (conditions.desktop) {
           const track = document.querySelector('.hscroll-track');
           const dist = () => track.scrollWidth - window.innerWidth;
@@ -213,14 +428,39 @@ export default function Landing() {
           });
         }
 
-        // Upscaler: the studio frame grows from a small window to full screen.
+        // 38' — tactics board: the pitch tilts into a broadcast angle, the XI walks out
+        // into a 4-3-3, then a passing move plays out to the goal.
+        const toks = gsap.utils.toArray('.tok');
+        const lines = gsap.utils.toArray('.tac-pitch .passes line');
+        const caps = gsap.utils.toArray('.tac-cap');
+        const tac = gsap.timeline({ scrollTrigger: { trigger: '.tactics', start: 'top top', end: '+=260%', pin: true, scrub: 0.8 } });
+        tac.fromTo('.tac-pitch', { rotateX: 0, rotateZ: -8, scale: 0.86 }, { rotateX: 48, rotateZ: 0, scale: 1.14, ease: 'power1.inOut', duration: 1.2 }, 0)
+          .fromTo('.tac-pitch .lines .pl, .tac-pitch .lines .goal', { strokeDasharray: 1, strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: 'none', stagger: 0.05, duration: 0.9 }, 0);
+        toks.forEach((t, i) => {
+          tac.to(t, { left: `${XI[i][1]}%`, top: `${XI[i][2]}%`, opacity: 1, scale: 1, ease: 'power3.out', duration: 0.7 }, 1 + i * 0.07);
+        });
+        tac.to(caps[0], { opacity: 0, y: -20, duration: 0.3 }, 1.1).fromTo(caps[1], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 }, 1.3);
+        tac.set('.tac-ball', { left: `${XI[0][1]}%`, top: `${XI[0][2] - 3}%` }, 2).to('.tac-ball', { opacity: 1, duration: 0.15 }, 2);
+        let t0 = 2.2;
+        MOVE.forEach((from, i) => {
+          const to = i < MOVE.length - 1 ? XI[MOVE[i + 1]] : [null, ...GOAL];
+          tac.to(lines[i], { strokeDashoffset: 0, ease: 'none', duration: 0.35 }, t0)
+            .to('.tac-ball', { left: `${to[1]}%`, top: `${to[2]}%`, rotate: `+=${200}`, ease: 'power1.inOut', duration: 0.35 }, t0);
+          t0 += 0.4;
+        });
+        tac.to(caps[1], { opacity: 0, y: -20, duration: 0.3 }, 3.2).fromTo(caps[2], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 }, 3.4)
+          .to('.tac-goal-glow', { opacity: 1, scale: 1.3, duration: 0.25, ease: 'power2.out' }, t0)
+          .to('.tac-goal-glow', { opacity: 0.35, duration: 0.4 }, t0 + 0.3)
+          .to({}, { duration: 0.4 });
+
+        // 45' — upscaler: the studio frame grows from a small window to full screen.
         gsap.timeline({ scrollTrigger: { trigger: '.upscale', start: 'top top', end: '+=130%', pin: true, scrub: 0.6,
           onUpdate: (self) => setScenePrice(40 + Math.round((self.progress * 260) / 10) * 10) } })
           .fromTo('.upscale-frame', { clipPath: 'inset(24% 26% 24% 26%)' }, { clipPath: 'inset(0% 0% 0% 0%)', ease: 'none' }, 0)
           .fromTo('.upscale .scene', { scale: 1.35 }, { scale: 1, ease: 'none' }, 0)
           .fromTo('.upscale-caption', { opacity: 0, y: 30 }, { opacity: 1, y: 0, ease: 'none' }, 0.6);
 
-        // Player wall: rows drift opposite ways and skew with scroll speed.
+        // 60' — player wall: rows drift opposite ways and skew with scroll speed.
         const skew = gsap.quickTo('.marquee-track', 'skewX', { duration: 0.5, ease: 'power3' });
         gsap.utils.toArray('.marquee-track').forEach((row, i) => {
           gsap.fromTo(row, { xPercent: i % 2 ? -25 : 0 }, {
@@ -230,13 +470,13 @@ export default function Landing() {
           });
         });
 
-        // CTA bursts open from the bottom edge.
-        gsap.fromTo('.cta', { clipPath: 'circle(8% at 50% 100%)' }, {
+        // 90' — CTA bursts open from the centre spot.
+        gsap.fromTo('.cta', { clipPath: 'circle(6% at 50% 100%)' }, {
           clipPath: 'circle(150% at 50% 100%)', ease: 'none',
           scrollTrigger: { trigger: '.cta', start: 'top bottom', end: 'top 15%', scrub: true },
         });
+        gsap.fromTo('.cta .crest-bg', { yPercent: 18, rotate: -6 }, { yPercent: -12, rotate: 0, ease: 'none', scrollTrigger: { trigger: '.cta', start: 'top bottom', end: 'bottom top', scrub: true } });
 
-        // Footer wordmark rises.
         gsap.from('.footer-word', { yPercent: 40, opacity: 0, duration: 1.4, ease: 'expo.out', scrollTrigger: { trigger: '.footer', start: 'top 85%' } });
       });
     }, root);
@@ -261,18 +501,19 @@ export default function Landing() {
   useEffect(() => { ScrollTrigger.refresh(); }, [players.length, stats]);
 
   const words = MANIFESTO.split(' ');
-  const tickerItems = [
-    live ? '● Auction live now' : 'Player auction',
+  const board1 = [
+    live ? 'Auction live now' : 'Player auction',
+    'IEM FED Cup',
     'Season 5',
     `${stats?.total ?? '—'} players`,
-    `${teams.length || '—'} teams`,
-    'Defenders → Midfielders → Forwards → Keepers',
-    'Every sale confirmed by the auctioneer',
+    `${teams.length || '—'} clubs`,
   ];
+  const board2 = ['Watch every bid live', 'FED Cup Season 5', 'Studio open on matchday', 'Captains bid from their phones'];
 
   return (
     <main ref={root}>
       {showIntro && <Intro onReveal={() => setReady(true)} />}
+      <MatchClock />
 
       {/* ------------------------------- HERO ------------------------------ */}
       <section className={`hero ${ready ? 'ready' : ''}`}>
@@ -291,27 +532,23 @@ export default function Landing() {
             <span className="mask"><span className="sig" style={{ animationDelay: '0.28s' }}>Cup</span></span>
           </h1>
           <div className="hero-foot">
-            <div className="season fade-up" style={{ animationDelay: '0.6s' }}><span className="gold" style={{ background: 'var(--grad-gold)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Season 5</span> · Player Auction</div>
+            <div className="season fade-up" style={{ animationDelay: '0.6s' }}><span style={{ background: 'var(--grad-gold)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Season 5</span> · Player Auction</div>
             <div className="row wrap fade-up" style={{ animationDelay: '0.75s' }}>
               <Magnetic><Link to="/studio" className="btn primary lg">{live ? 'Watch live' : 'Enter the studio'} <span className="arrow">→</span></Link></Magnetic>
               <Link to="/players" className="btn lg">Find a player</Link>
             </div>
           </div>
         </div>
+        <div className="kickoff" aria-hidden="true"><Ball className="ball" /><span className="shadow" /><span className="tiny">Kick off</span></div>
       </section>
 
-      <div className="ticker" aria-hidden="true">
-        <div className="ticker-track">
-          {[0, 1].map((k) => (
-            <span key={k}>{tickerItems.map((t) => <span key={t}>{t}<b className="star">★</b></span>)}</span>
-          ))}
-        </div>
-      </div>
+      <LedBoard items={board1} />
 
       {/* ----------------------------- MANIFESTO --------------------------- */}
-      <section className="sect mesh">
-        <div className="container">
-          <div className="sect-head"><span className="idx">[01] — The cup</span></div>
+      <section className="sect mesh manifesto-sect">
+        <PitchLines />
+        <div className="container" style={{ position: 'relative' }}>
+          <div className="sect-head"><span className="idx">00' — Kick-off</span></div>
           <p className="manifesto">
             {words.map((w, i) => (
               // eslint-disable-next-line react/no-array-index-key
@@ -322,22 +559,23 @@ export default function Landing() {
       </section>
 
       {/* -------------------------------- STATS ---------------------------- */}
-      <section className="sect on-bone mesh split-sect">
+      <section className="sect on-bone mesh split-sect" style={{ position: 'relative', overflow: 'hidden' }}>
+        <Mow />
         <div className="container">
           <div className="sect-head">
-            <span className="idx">[02] — By the numbers</span>
+            <span className="idx">15' — The scoreboard</span>
             <Lines className="big-title" lines={['The draft,', <>in <em>numbers</em></>]} />
           </div>
           <div className="stats">
             {[
               ['Players registered', stats?.total ?? 0],
-              ['Teams', teams.length],
+              ['Clubs', teams.length],
               ['Season', 5],
               ['Sold so far', stats?.sold ?? 0],
             ].map(([label, value]) => (
               <div key={label} data-up>
-                <b data-count={value}>{String(value).padStart(2, '0')}</b>
-                <span className="label">{label}</span>
+                <b className="flapper"><Flap value={value} /></b>
+                <span className="label" style={{ display: 'block', marginTop: 10 }}>{label}</span>
               </div>
             ))}
           </div>
@@ -348,7 +586,7 @@ export default function Landing() {
       <section className="hscroll">
         <div className="container" style={{ paddingTop: 'clamp(70px, 12vh, 120px)', paddingBottom: 30 }}>
           <div className="sect-head" style={{ marginBottom: 0 }}>
-            <span className="idx">[03] — How a lot runs</span>
+            <span className="idx">30' — How a lot runs</span>
             <Lines className="big-title" lines={['Four beats.', <>One <em>hammer.</em></>]} />
           </div>
         </div>
@@ -366,6 +604,9 @@ export default function Landing() {
         </div>
         <div className="hs-progress"><i /></div>
       </section>
+
+      {/* ------------------------------ TACTICS ---------------------------- */}
+      <Tactics players={players} />
 
       {/* ------------------------------ UPSCALER --------------------------- */}
       <section className="upscale">
@@ -389,7 +630,7 @@ export default function Landing() {
           </div>
           <div className="upscale-caption">
             <div>
-              <span className="idx">[04] — The studio</span>
+              <span className="idx">45' — Half time · The studio</span>
               <h2 className="big-title" style={{ fontSize: 'clamp(44px, 7vw, 120px)', marginTop: 10 }}>Every bid,<br /><em>live.</em></h2>
             </div>
             <Link to="/studio" className="btn primary lg" style={{ pointerEvents: 'auto' }}>Open the studio <span className="arrow">→</span></Link>
@@ -401,7 +642,7 @@ export default function Landing() {
       {rows[0].length > 0 && (
         <section className="sect wall" style={{ paddingBottom: 'clamp(40px, 8vh, 90px)' }}>
           <div className="container sect-head">
-            <span className="idx">[05] — The pool</span>
+            <span className="idx">60' — The pool</span>
             <Lines className="big-title" lines={[<>{stats?.total ?? players.length} players.</>, <>One <em>shot.</em></>]} />
           </div>
           {rows.map((row, i) => (
@@ -426,30 +667,52 @@ export default function Landing() {
         <section className="sect">
           <div className="container">
             <div className="sect-head">
-              <span className="idx">[06] — The clubs</span>
+              <span className="idx">75' — The clubs</span>
               <Lines className="big-title" lines={[`${teams.length} captains.`, <>Same <em>purse.</em></>]} />
             </div>
             <div className="teams-grid">
-              {teams.map((t, i) => (
-                <div key={t.id} className="team-tile" style={{ '--c': t.color, '--fg': onColor(t.color) }}>
-                  <div className="row" style={{ justifyContent: 'space-between' }}>
-                    <span className="label" style={{ color: 'inherit', opacity: 0.6 }}>Club {String(i + 1).padStart(2, '0')}</span>
-                    <span className="label" style={{ color: 'inherit', opacity: 0.6 }}>{t.shortName}</span>
+              {teams.map((t, i) => {
+                const fg = onColor(t.color);
+                return (
+                  <div
+                    key={t.id}
+                    className={`team-tile ${flipped === t.id ? 'flipped' : ''}`}
+                    style={{ '--c': t.color, '--fg': fg }}
+                    onClick={() => setFlipped((f) => (f === t.id ? null : t.id))}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${t.name} — show kit`}
+                  >
+                    <div className="tile-inner">
+                      <div className="tile-face">
+                        <div className="row" style={{ justifyContent: 'space-between' }}>
+                          <span className="label">Club {String(i + 1).padStart(2, '0')}</span>
+                          <span className="label">{t.shortName}</span>
+                        </div>
+                        <TeamLogo team={t} size={84} />
+                        <h3>{t.name}</h3>
+                      </div>
+                      <div className="tile-face tile-back">
+                        <Jersey color={t.color} text={fg} number={{ n: String(i + 1).padStart(2, '0'), label: t.shortName || t.name }} />
+                        <span className="kit-name">{t.name}</span>
+                        <span className="label" style={{ color: 'inherit', opacity: 0.75, position: 'relative' }}>Home kit · Season 5</span>
+                      </div>
+                    </div>
                   </div>
-                  <TeamLogo team={t} size={84} />
-                  <h3>{t.name}</h3>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
       )}
 
+      <LedBoard items={board2} reverse />
+
       {/* ---------------------------------- CTA ---------------------------- */}
       <section className="cta">
         <img className="crest-bg" src="/brand/crest.webp" alt="" aria-hidden="true" />
         <div className="cta-inner">
-          <span className="label" style={{ color: 'var(--ink)' }}>[07] — Matchday</span>
+          <span className="label" style={{ color: 'var(--ink)' }}>90' — Full time</span>
           <h2 className="big-title" style={{ color: 'var(--ink)' }}>The hammer<br /><em>falls</em> live</h2>
           <Magnetic strength={0.4}><Link to="/studio" className="btn lg">{live ? 'Watch now' : 'Enter the studio'} <span className="arrow">→</span></Link></Magnetic>
         </div>
