@@ -48,6 +48,7 @@ function MatchClock() {
     const el = ref.current;
     const min = el.querySelector('.mc-time');
     const half = el.querySelector('.mc-half');
+    let idle = 0;
     const st = ScrollTrigger.create({
       start: 0,
       end: 'max',
@@ -57,10 +58,17 @@ function MatchClock() {
         el.style.setProperty('--p', p.toFixed(4));
         min.textContent = `${String(m).padStart(2, '0')}'`;
         half.textContent = p >= 0.995 ? 'Full time' : m >= 44 && m <= 46 ? 'Half time' : m < 45 ? '1st half' : '2nd half';
-        el.classList.toggle('show', p > 0.04);
+        // Visible only while scrolling (and not over the hero/footer), so it never sits on content.
+        el.classList.toggle('show', p > 0.04 && p < 0.97);
+        el.classList.remove('idle');
+        clearTimeout(idle);
+        idle = setTimeout(() => el.classList.add('idle'), 1400);
       },
     });
-    return () => st.kill();
+    return () => {
+      clearTimeout(idle);
+      st.kill();
+    };
   }, []);
   return (
     <div className="match-clock" ref={ref} aria-hidden="true">

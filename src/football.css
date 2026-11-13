@@ -20,7 +20,7 @@
 }
 
 /* Kick-off scroll cue */
-.kickoff { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; z-index: 2; }
+.kickoff { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; z-index: 2; }
 .kickoff .ball { width: 18px; height: 18px; animation: ball-bounce 1.6s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
 .kickoff .shadow { width: 16px; height: 4px; border-radius: 50%; background: rgba(0, 0, 0, 0.7); animation: ball-shadow 1.6s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
 @keyframes ball-bounce { 0%, 100% { transform: translateY(-16px) rotate(0deg); } 50% { transform: translateY(0) rotate(180deg) scaleY(0.9); } }
@@ -59,8 +59,8 @@
 
 /* Tactics board */
 .tactics { position: relative; height: 100svh; overflow: hidden; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; gap: clamp(20px, 4vw, 60px); padding: 80px var(--pad) 40px; background: radial-gradient(70% 60% at 75% 55%, rgba(30, 120, 60, 0.18), transparent 70%), var(--ink); }
-.tac-copy { position: relative; min-height: 360px; }
-.tac-cap { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; opacity: 0; }
+.tac-copy { position: relative; display: grid; align-items: center; }
+.tac-cap { grid-area: 1 / 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; opacity: 0; }
 .tac-cap:first-child { opacity: 1; }
 .tac-cap p { color: var(--bone-3); max-width: 420px; font-size: 16px; }
 .tac-cap .big-title { font-size: clamp(48px, 7vw, 120px); }
@@ -82,9 +82,10 @@
 .tac-goal-glow { position: absolute; left: 50%; top: -3%; width: 34%; height: 9%; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(255, 216, 74, 0.95), transparent); opacity: 0; filter: blur(4px); z-index: 1; }
 @media (max-width: 860px) {
   .tactics { grid-template-columns: 1fr; grid-template-rows: auto 1fr; padding: 84px var(--pad) 24px; gap: 8px; }
-  .tac-copy { min-height: 180px; }
+  .tac-cap { gap: 10px; }
+  .tac-cap .big-title { font-size: 44px; }
   .tac-cap p { font-size: 14px; }
-  .tac-pitch { height: min(58svh, 560px); }
+  .tac-pitch { height: min(50svh, 480px); }
   .tok .pos { display: none; }
 }
 
@@ -99,3 +100,17 @@
 .tile-back::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0 14px, transparent 14px 28px); }
 .tile-back svg { width: 56%; max-width: 160px; position: relative; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.35)); }
 .tile-back .kit-name { position: relative; font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: 22px; letter-spacing: 0.06em; }
+
+/* --- overlap fixes --- */
+@media (min-width: 861px) { .hero-inner { padding-bottom: 92px; } }
+.match-clock.idle { opacity: 0; }
+@media (max-width: 760px) {
+  .upscale .scene { align-items: start; padding-top: 86px; }
+  .scene-grid { gap: 14px; }
+  .scene-grid .pcard-wrap { width: 46%; }
+  .scene-price .price { font-size: 80px; }
+  .scene-price .lower-third { display: none; }
+  .upscale-caption { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .upscale-caption .big-title { font-size: 40px !important; }
+  .upscale-caption .btn { min-height: 46px; }
+}
