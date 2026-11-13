@@ -1,0 +1,31 @@
+/* Team logo framing editor (admin). */
+.dlg.la { width: min(640px, 100%); }
+.la-title { margin: 4px 0 16px; }
+.la-body { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; }
+.la-stage {
+  position: relative; width: 260px; height: 260px; overflow: hidden; border-radius: 2px;
+  background: repeating-conic-gradient(#1c1c20 0% 25%, #141416 0% 50%) 0 0 / 20px 20px;
+  outline: 1px solid var(--rule-2); cursor: grab; touch-action: none; user-select: none;
+}
+.la-stage:active { cursor: grabbing; }
+.la-stage img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; will-change: transform; }
+.la-guide { position: absolute; background: rgba(255, 255, 255, 0.12); pointer-events: none; }
+.la-guide.h { left: 0; right: 0; top: 50%; height: 1px; }
+.la-guide.v { top: 0; bottom: 0; left: 50%; width: 1px; }
+.la-hint {
+  position: absolute; left: 8px; bottom: 8px; padding: 3px 7px; border-radius: 2px; background: rgba(0, 0, 0, 0.6);
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-3);
+  pointer-events: none; transition: opacity 0.3s;
+}
+.la-stage:active .la-hint { opacity: 0; }
+.la-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.la-previews { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px; padding: 14px; background: var(--bg-2, #111114); border: 1px solid var(--rule-2); border-radius: 2px; }
+.la-previews .team-logo { outline: 1px dashed rgba(255, 255, 255, 0.14); }
+.la-previews.on-colour .team-logo { outline-color: rgba(0, 0, 0, 0.25); }
+.la-zoom { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.la-zoom input[type='range'] { flex: 1; accent-color: var(--signal); }
+.la-pct { min-width: 46px; text-align: right; }
+@media (max-width: 640px) {
+  .la-body { grid-template-columns: 1fr; }
+  .la-stage { width: min(260px, 100%); height: auto; aspect-ratio: 1; margin: 0 auto; }
+}

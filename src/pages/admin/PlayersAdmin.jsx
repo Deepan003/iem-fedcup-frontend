@@ -64,9 +64,16 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
         <>
           <td><b>{p.name}</b>{p.photoError && <div className="small" style={{ color: '#fca5a5' }}>{p.photoError}</div>}</td>
           <td>{POS_SHORT[p.position]}</td>
-          <td>{p.tier || <span className="muted">—</span>}</td>
+          <td>{p.tier ? (p.tierMatched ? p.tier : <span style={{ color: '#fcd34d' }} title="No tier with this name in Rules & views">{p.tier} ⚠</span>) : <span className="muted">—</span>}</td>
           <td className="muted">{p.year}</td>
-          <td>{p.basePrice ?? <span className="muted">tier</span>}</td>
+          <td title={p.basePrice != null ? 'Own base price (overrides the tier)' : p.tierMatched ? 'From the tier' : 'No tier: default base price'}>
+            {locked ? <span className="muted">—</span> : (
+              <>
+                <b className="mono">{p.effectiveBase ?? p.basePrice ?? '—'}</b>{' '}
+                <span className="tiny">{p.basePrice != null ? 'own' : p.tierMatched ? 'tier' : 'default'}</span>
+              </>
+            )}
+          </td>
         </>
       )}
       <td>
@@ -110,6 +117,7 @@ export default function PlayersAdmin() {
   const ask = useConfirm();
   const [players, setPlayers] = useState(null);
   const [tiers, setTiers] = useState([]);
+  const [defaultBase, setDefaultBase] = useState(null);
   const [teams, setTeams] = useState([]);
   const [q, setQ] = useState('');
   const [pos, setPos] = useState('all');
@@ -124,7 +132,7 @@ export default function PlayersAdmin() {
   }, [call]);
   useEffect(() => {
     load();
-    call('/admin/settings').then((s) => setTiers(s.auction.tiers)).catch(() => {});
+    call('/admin/settings').then((s) => { setTiers(s.auction.tiers); setDefaultBase(s.auction.defaultBasePrice); }).catch(() => {});
     call('/admin/teams').then(setTeams).catch(() => {});
   }, [call, load]);
   // Live: refresh when players change anywhere (import, photos, sales, edits on another device).
@@ -138,6 +146,8 @@ export default function PlayersAdmin() {
   if (!players) return <Spinner />;
   const counts = POSITIONS.map((p) => `${POS_SHORT[p]} ${players.filter((x) => x.position === p).length}`).join(' · ');
   const missingPhotos = players.filter((p) => !p.thumbUrl).length;
+  const tierCounts = tiers.map((t) => `${t.name} ${players.filter((p) => p.tierMatched && p.tier.trim().toLowerCase() === t.name.trim().toLowerCase()).length}`).join(' · ');
+  const noTier = players.filter((p) => !p.tierMatched && p.basePrice == null && !['sold', 'retained'].includes(p.status));
 
   return (
     <>
@@ -146,6 +156,12 @@ export default function PlayersAdmin() {
         <span className="chip">{players.length} players</span>
         <span className="chip">{counts}</span>
         {missingPhotos > 0 && <span className="chip" style={{ color: '#fcd34d' }}>{missingPhotos} without photo</span>}
+        {tiers.length > 0 && <span className="chip">{tierCounts}</span>}
+        {noTier.length > 0 && (
+          <button type="button" className="chip" style={{ color: '#fcd34d', cursor: 'pointer' }} title="Select them, then use Set tier" onClick={() => setSel(new Set(noTier.map((p) => p.id)))}>
+            ⚠ {noTier.length} without a tier open at the default {defaultBase ?? ''} · select them
+          </button>
+        )}
       </div>
 
       <div className="cols" style={{ marginBottom: 14 }}>

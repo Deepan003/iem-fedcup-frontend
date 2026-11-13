@@ -7,6 +7,7 @@ import {
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import RetainedEditor from './RetainedEditor.jsx';
+import LogoAdjust from './LogoAdjust.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 
 const blankTeam = {
@@ -25,6 +26,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
   const [run, busy] = useAction();
   const [form, setForm] = useState({ ...team, budget: team.budget ?? '' });
   const [password, setPassword] = useState(null);
+  const [adjusting, setAdjusting] = useState(false);
   const [ret, setRet] = useState({
     playerId: '', name: '', position: 'Forward', price: '',
   });
@@ -45,8 +47,19 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
 
   return (
     <div className="card stack" style={{ borderColor: form.color }}>
+      {adjusting && (
+        <LogoAdjust
+          team={team}
+          onClose={() => setAdjusting(false)}
+          onSave={(fit) => run(async () => { await call(`/admin/teams/${team.id}`, { method: 'PUT', body: { logoFit: fit } }); onSaved(); }, 'Logo framing saved')}
+        />
+      )}
       <div className="row">
-        <TeamLogo team={team} size={56} />
+        {team.logoUrl ? (
+          <button type="button" className="logo-adjust-btn" onClick={() => setAdjusting(true)} title="Adjust logo framing">
+            <TeamLogo team={team} size={56} />
+          </button>
+        ) : <TeamLogo team={team} size={56} />}
         <div className="grow">
           <b style={{ fontSize: 18 }}>{team.name}</b>
           <div className="muted small">{liveTeam ? `${liveTeam.count} players · purse ${money(liveTeam.purse, currency)}` : ''}</div>
@@ -66,6 +79,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
           Upload logo
           <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && run(async () => { await call(`/admin/teams/${team.id}/logo`, { method: 'POST', form: upload(e.target.files[0]) }); onSaved(); }, 'Logo updated')} />
         </label>
+        {team.logoUrl && <button type="button" className="btn" onClick={() => setAdjusting(true)}>Adjust logo</button>}
         <label className="btn">
           Captain photo
           <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && run(async () => { await call(`/admin/teams/${team.id}/captain-photo`, { method: 'POST', form: upload(e.target.files[0]) }); onSaved(); }, 'Photo updated')} />

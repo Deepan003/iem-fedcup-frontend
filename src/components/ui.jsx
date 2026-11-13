@@ -104,12 +104,16 @@ export function useReveal() {
 }
 
 /* ------------------------------ domain bits ------------------------------ */
-export function TeamLogo({ team, size = 36 }) {
+/** CSS transform for an admin-framed logo ({scale, x, y} with x/y in % of the box). */
+export const logoTransform = (fit) => (fit ? `translate(${fit.x || 0}%, ${fit.y || 0}%) scale(${fit.scale || 1})` : undefined);
+
+export function TeamLogo({ team, size = 36, fit }) {
   if (!team) return <div className="team-logo" style={{ width: size, height: size }} />;
   const url = assetUrl(team.logoUrl);
+  const f = fit !== undefined ? fit : team.logoFit;
   return (
     <div className="team-logo" style={{ width: size, height: size, background: url ? 'transparent' : team.color, color: onColor(team.color) }}>
-      {url ? <img src={url} alt="" loading="lazy" /> : (team.shortName || initials(team.name))}
+      {url ? <img src={url} alt="" loading="lazy" draggable={false} style={{ transform: logoTransform(f) }} /> : (team.shortName || initials(team.name))}
     </div>
   );
 }

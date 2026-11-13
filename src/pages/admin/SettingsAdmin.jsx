@@ -84,6 +84,7 @@ function AuctionRules({ value, onSave }) {
       </div>
 
       <h2 style={{ marginTop: 10 }}>Tiers & base prices</h2>
+      <p className="muted small" style={{ margin: 0 }}>A player opens at their <b>tier's base price</b>. A price typed on a single player (Players page) overrides it; players with no tier open at the default base price above. Set tiers in bulk on the Players page, or with a <b>Tier</b> column in the sheet.</p>
       {a.tiers.map((t, i) => (
         <div key={i} className="row wrap"> {/* eslint-disable-line react/no-array-index-key */}
           <input className="input" style={{ maxWidth: 160 }} value={t.name} onChange={(e) => set('tiers')(a.tiers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />

@@ -1,6 +1,5 @@
-import { assetUrl } from '../../lib/api.js';
 import { money } from '../../lib/format.js';
-import { Spinner } from '../../components/ui.jsx';
+import { Spinner, TeamLogo } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 
 /** Print-ready auction report. "Save as PDF" uses the browser's print dialog (no extra download). */
@@ -46,7 +45,7 @@ export default function Report() {
       {teams.map((t) => (
         <section key={t.id} className="rp-page">
           <header className="rp-team" style={{ borderColor: t.color }}>
-            {t.logoUrl && <img src={assetUrl(t.logoUrl)} alt="" />}
+            {t.logoUrl && <TeamLogo team={t} size={72} />}
             <div>
               <h2>{t.name}</h2>
               <p>Captain: {t.captainName || '—'} · {t.count} players · spent {money(t.spent, cur)} · left {money(t.purse, cur)}</p>
