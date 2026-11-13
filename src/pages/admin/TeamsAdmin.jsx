@@ -1,0 +1,195 @@
+import { useCallback, useEffect, useState } from 'react';
+import { money, POSITIONS, POS_SHORT } from '../../lib/format.js';
+import {
+  Field, Spinner, TeamLogo, Toggle, useAction,
+} from '../../components/ui.jsx';
+import { useAdmin } from './AdminApp.jsx';
+
+const blankTeam = {
+  name: '', shortName: '', color: '#e11d48', captainName: '', budget: '',
+};
+
+function upload(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  return fd;
+}
+
+function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
+  const { call } = useAdmin();
+  const [run, busy] = useAction();
+  const [form, setForm] = useState({ ...team, budget: team.budget ?? '' });
+  const [password, setPassword] = useState(null);
+  const [ret, setRet] = useState({
+    playerId: '', name: '', position: 'Forward', price: '',
+  });
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }));
+
+  const save = () => run(async () => {
+    await call(`/admin/teams/${team.id}`, {
+      method: 'PUT',
+      body: {
+        name: form.name, shortName: form.shortName, color: form.color, captainName: form.captainName, budget: form.budget === '' ? null : Number(form.budget), frozen: form.frozen,
+      },
+    });
+    onSaved();
+  }, 'Team saved');
+
+  const retained = (liveTeam?.squad || []).filter((p) => p.retained);
+  const pool = players.filter((p) => ['available', 'unsold', 'withheld'].includes(p.status));
+
+  return (
+    <div className="card stack" style={{ borderColor: form.color }}>
+      <div className="row">
+        <TeamLogo team={team} size={56} />
+        <div className="grow">
+          <b style={{ fontSize: 18 }}>{team.name}</b>
+          <div className="muted small">{liveTeam ? `${liveTeam.count} players · purse ${money(liveTeam.purse, currency)}` : ''}</div>
+        </div>
+      </div>
+      <div className="form-grid">
+        <Field label="Team name"><input className="input" value={form.name} onChange={set('name')} /></Field>
+        <Field label="Short name"><input className="input" value={form.shortName} onChange={set('shortName')} maxLength={5} /></Field>
+        <Field label="Colour"><input className="input" type="color" value={form.color} onChange={set('color')} style={{ padding: 4 }} /></Field>
+        <Field label="Captain"><input className="input" value={form.captainName} onChange={set('captainName')} /></Field>
+        <Field label="Budget (empty = default)"><input className="input" inputMode="numeric" value={form.budget} onChange={(e) => set('budget')(e.target.value.replace(/\D/g, ''))} /></Field>
+      </div>
+      <Toggle label="Freeze team" hint="A frozen team cannot bid (e.g. during a dispute)." checked={form.frozen} onChange={set('frozen')} />
+      <div className="row wrap">
+        <button type="button" className="btn primary" disabled={busy} onClick={save}>Save</button>
+        <label className="btn">
+          Upload logo
+          <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && run(async () => { await call(`/admin/teams/${team.id}/logo`, { method: 'POST', form: upload(e.target.files[0]) }); onSaved(); }, 'Logo updated')} />
+        </label>
+        <label className="btn">
+          Captain photo
+          <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && run(async () => { await call(`/admin/teams/${team.id}/captain-photo`, { method: 'POST', form: upload(e.target.files[0]) }); onSaved(); }, 'Photo updated')} />
+        </label>
+      </div>
+
+      <div className="card" style={{ background: 'var(--bg-2)' }}>
+        <h2>Captain login</h2>
+        {password ? (
+          <p>Password: <span className="kbd">{password}</span> <button type="button" className="btn sm" onClick={() => navigator.clipboard?.writeText(password)}>Copy</button></p>
+        ) : <p className="muted small">{team.hasPassword ? 'A password is set.' : 'No password yet. The captain cannot sign in.'}</p>}
+        <div className="row wrap">
+          {team.hasPassword && <button type="button" className="btn sm" onClick={() => run(async () => setPassword((await call(`/admin/teams/${team.id}/password`)).password))}>Show</button>}
+          <button
+            type="button"
+            className="btn sm"
+            onClick={() => (!team.hasPassword || window.confirm('Generate a new password? The captain\'s devices will be signed out.')) && run(async () => {
+              setPassword((await call(`/admin/teams/${team.id}/password`, { method: 'POST', body: {} })).password);
+              onSaved();
+            }, 'New password generated')}
+          >
+            {team.hasPassword ? 'Regenerate' : 'Generate password'}
+          </button>
+        </div>
+      </div>
+
+      <div className="card" style={{ background: 'var(--bg-2)' }}>
+        <h2>Retained players</h2>
+        {retained.length === 0 && <p className="muted small">None. Their price is deducted from the budget automatically.</p>}
+        {retained.map((p) => (
+          <div key={p.id} className="list-row small">
+            <span className="chip">{POS_SHORT[p.position]}</span>
+            <span className="grow">{p.name}</span>
+            <b>{money(p.price, currency)}</b>
+            <button type="button" className="btn sm ghost" onClick={() => window.confirm(`Remove ${p.name} from retained? They go back to the auction pool.`) && run(async () => { await call(`/admin/teams/${team.id}/retained/${p.id}`, { method: 'DELETE' }); onSaved(); })}>✕</button>
+          </div>
+        ))}
+        <div className="form-grid" style={{ marginTop: 10 }}>
+          <Field label="From player list">
+            <select className="input" value={ret.playerId} onChange={(e) => setRet({ ...ret, playerId: e.target.value })}>
+              <option value="">New player (type below)</option>
+              {pool.map((p) => <option key={p.id} value={p.id}>{POS_SHORT[p.position]} · {p.name}</option>)}
+            </select>
+          </Field>
+          {!ret.playerId && <Field label="Name"><input className="input" value={ret.name} onChange={(e) => setRet({ ...ret, name: e.target.value })} /></Field>}
+          {!ret.playerId && (
+            <Field label="Position">
+              <select className="input" value={ret.position} onChange={(e) => setRet({ ...ret, position: e.target.value })}>{POSITIONS.map((p) => <option key={p}>{p}</option>)}</select>
+            </Field>
+          )}
+          <Field label="Retention price"><input className="input" inputMode="numeric" value={ret.price} onChange={(e) => setRet({ ...ret, price: e.target.value.replace(/\D/g, '') })} /></Field>
+        </div>
+        <button
+          type="button"
+          className="btn sm"
+          style={{ marginTop: 10 }}
+          disabled={busy || ret.price === '' || (!ret.playerId && !ret.name)}
+          onClick={() => run(async () => {
+            await call(`/admin/teams/${team.id}/retained`, {
+              method: 'POST',
+              body: ret.playerId ? { playerId: ret.playerId, price: Number(ret.price) } : { name: ret.name, position: ret.position, price: Number(ret.price) },
+            });
+            setRet({
+              playerId: '', name: '', position: 'Forward', price: '',
+            });
+            onSaved();
+          }, 'Retained player added')}
+        >
+          Add retained player
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="btn danger sm"
+        style={{ alignSelf: 'flex-start' }}
+        onClick={() => window.confirm(`Delete ${team.name}? This cannot be undone.`) && run(async () => { await call(`/admin/teams/${team.id}`, { method: 'DELETE' }); onSaved(); }, 'Team deleted')}
+      >
+        Delete team
+      </button>
+    </div>
+  );
+}
+
+export default function TeamsAdmin() {
+  const { call, auction } = useAdmin();
+  const [teams, setTeams] = useState(null);
+  const [players, setPlayers] = useState([]);
+  const [form, setForm] = useState(blankTeam);
+  const [run, busy] = useAction();
+
+  const load = useCallback(() => {
+    call('/admin/teams').then(setTeams).catch(() => setTeams([]));
+    call('/admin/players').then(setPlayers).catch(() => {});
+  }, [call]);
+  useEffect(load, [load]);
+
+  if (!teams) return <Spinner />;
+  const live = Object.fromEntries((auction.state?.teams || []).map((t) => [t.id, t]));
+
+  return (
+    <>
+      <h1>Teams</h1>
+      <form
+        className="card"
+        style={{ marginBottom: 14 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          run(async () => {
+            await call('/admin/teams', { method: 'POST', body: { ...form, budget: form.budget === '' ? null : Number(form.budget), order: teams.length } });
+            setForm(blankTeam);
+            load();
+          }, 'Team added');
+        }}
+      >
+        <h2>Add a team</h2>
+        <div className="form-grid">
+          <Field label="Team name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
+          <Field label="Short name"><input className="input" value={form.shortName} maxLength={5} onChange={(e) => setForm({ ...form, shortName: e.target.value })} /></Field>
+          <Field label="Colour"><input className="input" type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} style={{ padding: 4 }} /></Field>
+          <Field label="Captain"><input className="input" value={form.captainName} onChange={(e) => setForm({ ...form, captainName: e.target.value })} /></Field>
+        </div>
+        <button className="btn primary" style={{ marginTop: 12 }} disabled={busy || !form.name}>Add team</button>
+      </form>
+      <div className="cols">
+        {teams.map((t) => (
+          <TeamEditor key={`${t.id}-${t.logoUrl}-${t.hasPassword}`} team={t} liveTeam={live[t.id]} players={players} currency={auction.state?.currency} onSaved={load} />
+        ))}
+      </div>
+    </>
+  );
+}
