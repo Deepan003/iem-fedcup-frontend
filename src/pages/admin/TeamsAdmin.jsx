@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { money, POSITIONS, POS_SHORT } from '../../lib/format.js';
 import {
   Field, Spinner, TeamLogo, Toggle, useAction,
@@ -150,6 +152,9 @@ export default function TeamsAdmin() {
   const [teams, setTeams] = useState(null);
   const [players, setPlayers] = useState([]);
   const [form, setForm] = useState(blankTeam);
+  const [logoFile, setLogoFile] = useState(null);
+  const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : null), [logoFile]);
+  useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
   const [run, busy] = useAction();
 
   const load = useCallback(() => {
@@ -170,20 +175,28 @@ export default function TeamsAdmin() {
         onSubmit={(e) => {
           e.preventDefault();
           run(async () => {
-            await call('/admin/teams', { method: 'POST', body: { ...form, budget: form.budget === '' ? null : Number(form.budget), order: teams.length } });
+            const team = await call('/admin/teams', { method: 'POST', body: { ...form, budget: form.budget === '' ? null : Number(form.budget), order: teams.length } });
+            if (logoFile) await call(`/admin/teams/${team.id}/logo`, { method: 'POST', form: upload(logoFile) });
             setForm(blankTeam);
+            setLogoFile(null);
             load();
           }, 'Team added');
         }}
       >
         <h2>Add a team</h2>
-        <div className="form-grid">
-          <Field label="Team name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
-          <Field label="Short name"><input className="input" value={form.shortName} maxLength={5} onChange={(e) => setForm({ ...form, shortName: e.target.value })} /></Field>
-          <Field label="Colour"><input className="input" type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} style={{ padding: 4 }} /></Field>
-          <Field label="Captain"><input className="input" value={form.captainName} onChange={(e) => setForm({ ...form, captainName: e.target.value })} /></Field>
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: 18, alignItems: 'start' }}>
+          <label className="logo-drop" title="Upload team logo">
+            {logoPreview ? <img src={logoPreview} alt="Logo preview" /> : <span>+ Logo<br /><small>PNG / SVG / JPG</small></span>}
+            <input type="file" accept="image/*" hidden onChange={(e) => setLogoFile(e.target.files[0] || null)} />
+          </label>
+          <div className="form-grid">
+            <Field label="Team name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
+            <Field label="Short name"><input className="input" value={form.shortName} maxLength={5} onChange={(e) => setForm({ ...form, shortName: e.target.value })} /></Field>
+            <Field label="Colour"><input className="input" type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} style={{ padding: 4 }} /></Field>
+            <Field label="Captain"><input className="input" value={form.captainName} onChange={(e) => setForm({ ...form, captainName: e.target.value })} /></Field>
+          </div>
         </div>
-        <button className="btn primary" style={{ marginTop: 12 }} disabled={busy || !form.name}>Add team</button>
+        <button className="btn primary" style={{ marginTop: 14 }} disabled={busy || !form.name}>Add team</button>
       </form>
       <div className="cols">
         {teams.map((t) => (
