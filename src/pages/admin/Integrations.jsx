@@ -4,6 +4,7 @@ import {
   Field, Spinner, useAction,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import { useConfirm } from '../../components/Dialog.jsx';
 
 const mb = (b) => (b >= 1024 * 1024 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(0, Math.round(b / 1024))} KB`);
 
@@ -51,8 +52,9 @@ function StorageMeter({ call, refreshKey }) {
 
 export default function Integrations() {
   const {
-    call, token, jobs, setJobs,
+    call, token, jobs, setJobs, auction,
   } = useAdmin();
+  const ask = useConfirm();
   const [info, setInfo] = useState(null);
   const [gjson, setGjson] = useState('');
   const [sheet, setSheet] = useState({ url: '', tab: '' });
@@ -67,7 +69,8 @@ export default function Integrations() {
   const [run, busy] = useAction();
   const loadStatus = useCallback(() => call('/admin/import/status').then(setStatus).catch(() => {}), [call]);
   const jobDoneAt = jobs.photos && !jobs.photos.running ? jobs.photos.finishedAt : 0;
-  useEffect(() => { loadStatus(); }, [loadStatus, jobDoneAt]);
+  const dataV = auction.state?.dataV;
+  useEffect(() => { loadStatus(); }, [loadStatus, jobDoneAt, dataV]);
 
   const load = useCallback(() => call('/admin/integrations').then((d) => {
     setInfo(d);
@@ -98,7 +101,7 @@ export default function Integrations() {
     <>
       <h1>Data & storage</h1>
       <p className="muted" style={{ marginTop: -6, marginBottom: 14 }}>Credentials are stored encrypted in the database and never shown again in full. See the backend README for step-by-step setup.</p>
-      <StorageMeter call={call} refreshKey={job && !job.running ? job.finishedAt : 0} />
+      <StorageMeter call={call} refreshKey={`${jobDoneAt}-${dataV}`} />
       <div className="cols">
         <div className="card stack">
           <h2>1 · Google (Sheets + Drive)</h2>
@@ -108,7 +111,7 @@ export default function Integrations() {
           <textarea className="input" placeholder='{"type": "service_account", ...}' value={gjson} onChange={(e) => setGjson(e.target.value)} />
           <div className="row wrap">
             <button type="button" className="btn primary" disabled={!gjson || busy} onClick={() => run(async () => { await call('/admin/integrations/google', { method: 'PUT', body: { json: gjson } }); setGjson(''); await load(); }, 'Google key saved')}>Save key</button>
-            {info.google.configured && <button type="button" className="btn ghost" onClick={() => window.confirm('Remove the Google key?') && run(async () => { await call('/admin/integrations/google', { method: 'DELETE' }); await load(); })}>Remove</button>}
+            {info.google.configured && <button type="button" className="btn ghost" onClick={async () => (await ask({ title: 'Remove the Google key?', message: 'Sheet import and photo sync stop working until a key is added again.', tone: 'warning', confirmLabel: 'Remove' })) && run(async () => { await call('/admin/integrations/google', { method: 'DELETE' }); await load(); })}>Remove</button>}
           </div>
         </div>
 
@@ -124,7 +127,8 @@ export default function Integrations() {
         </div>
 
         <div className="card stack">
-          <h2>3 · Cloudflare R2 (images)</h2>
+          <h2>3 · Cloudflare R2 (optional)</h2>
+          <p className="muted small" style={{ margin: 0 }}>Not needed: photos are already stored in your database. Only fill this in if you set up R2 later.</p>
           <p className="small" style={{ margin: 0 }}>Currently storing images in: <b>{info.storageMode === 'r2' ? 'Cloudflare R2' : 'the database (fallback)'}</b></p>
           <div className="form-grid">
             <Field label="Account ID"><input className="input" value={r2.accountId} onChange={(e) => setR2({ ...r2, accountId: e.target.value })} /></Field>
@@ -135,7 +139,7 @@ export default function Integrations() {
           <Field label="Public URL" hint="Custom domain (recommended) or r2.dev URL"><input className="input" value={r2.publicUrl} onChange={(e) => setR2({ ...r2, publicUrl: e.target.value })} placeholder="https://media.yourdomain.com" /></Field>
           <div className="row wrap">
             <button type="button" className="btn primary" disabled={busy} onClick={() => run(async () => { await call('/admin/integrations/r2', { method: 'PUT', body: r2 }); await load(); }, 'R2 connected and tested')}>Test & save</button>
-            {info.r2.configured && <button type="button" className="btn ghost" onClick={() => window.confirm('Disconnect R2? New uploads will go to the database.') && run(async () => { await call('/admin/integrations/r2', { method: 'DELETE' }); await load(); })}>Disconnect</button>}
+            {info.r2.configured && <button type="button" className="btn ghost" onClick={async () => (await ask({ title: 'Disconnect R2?', message: 'New uploads will be stored in the database instead.', tone: 'warning', confirmLabel: 'Disconnect' })) && run(async () => { await call('/admin/integrations/r2', { method: 'DELETE' }); await load(); })}>Disconnect</button>}
           </div>
           <p className="muted small" style={{ margin: 0 }}>After connecting R2, run "Sync photos" again with "re-download all" to move existing photos to R2.</p>
         </div>
@@ -205,7 +209,7 @@ export default function Integrations() {
           <div className="row wrap">
             <button type="button" className="btn" disabled={busy || job?.running} onClick={() => run(() => call('/admin/import/photos', { method: 'POST', body: {} }), 'Photo sync started')}>Sync new photos</button>
             <button type="button" className="btn" disabled={busy || job?.running} onClick={() => run(() => call('/admin/import/photos', { method: 'POST', body: { onlyFailed: true } }), 'Retrying failed photos')}>↻ Retry failed</button>
-            <button type="button" className="btn ghost" disabled={busy || job?.running} onClick={() => window.confirm('Re-download and re-process every photo?') && run(() => call('/admin/import/photos', { method: 'POST', body: { force: true } }), 'Re-downloading all photos')}>Re-download all</button>
+            <button type="button" className="btn ghost" disabled={busy || job?.running} onClick={async () => (await ask({ title: 'Re-download every photo?', message: 'All player photos are fetched from Drive and processed again. This takes a few minutes.', confirmLabel: 'Re-download' })) && run(() => call('/admin/import/photos', { method: 'POST', body: { force: true } }), 'Re-downloading all photos')}>Re-download all</button>
           </div>
           <p className="muted small" style={{ margin: 0 }}>iPhone (HEIC) photos are converted automatically. "Sync new photos" also resumes an interrupted sync.</p>
           {job && (
@@ -263,8 +267,9 @@ export default function Integrations() {
             className="btn danger"
             style={{ alignSelf: 'flex-start' }}
             onClick={() => {
-              const typed = window.prompt('Type RESET to reset the whole auction');
-              if (typed === 'RESET') run(() => call('/admin/auction/reset', { method: 'POST', body: { confirm: 'RESET' } }), 'Auction reset');
+              ask({
+                title: 'Reset the auction?', message: 'Every sold and unsold player goes back into the pool and all bids are cleared. Teams, players, retained players and settings are kept.', tone: 'danger', expect: 'RESET', confirmLabel: 'Reset auction',
+              }).then((yes) => yes && run(() => call('/admin/auction/reset', { method: 'POST', body: { confirm: 'RESET' } }), 'Auction reset'));
             }}
           >
             Reset auction

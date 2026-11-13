@@ -7,6 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import Lenis from 'lenis';
 import { api, API_URL, assetUrl } from '../lib/api.js';
+import { useAuction } from '../lib/auction.js';
 import { initials, onColor } from '../lib/format.js';
 import Shader from '../components/Shader.jsx';
 import { Magnetic, RollingNumber } from '../components/fx.jsx';
@@ -346,6 +347,20 @@ export default function Landing() {
     api('/state').then((s) => setStats(s.stats)).catch(() => {});
     fetch(`${API_URL}/api/players`).then((r) => (r.ok ? r.json() : [])).then(setPlayers).catch(() => {});
   }, []);
+
+  // Live: stats, the "on air" banner, teams and players follow the auction in real time.
+  const { state: liveState } = useAuction();
+  const statsKey = liveState ? JSON.stringify(liveState.stats) : '';
+  useEffect(() => {
+    if (!liveState) return;
+    setStats(liveState.stats);
+    setConfig((c) => (c ? { ...c, auctionStatus: liveState.status, studio: { ...c.studio, ...liveState.studio } } : c));
+  }, [statsKey, liveState?.status, liveState?.studio?.live]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!liveState?.dataV) return;
+    api('/teams').then(setTeams).catch(() => {});
+    fetch(`${API_URL}/api/players`).then((r) => (r.ok ? r.json() : [])).then(setPlayers).catch(() => {});
+  }, [liveState?.dataV, liveState?.stats?.sold]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const live = config && (config.studio.live || config.auctionStatus === 'live');
   const featured = useMemo(() => players.find((p) => p.photoUrl && p.tier === 'Icon') || players.find((p) => p.photoUrl) || {

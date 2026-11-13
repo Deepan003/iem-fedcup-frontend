@@ -6,6 +6,7 @@ import {
   Field, Spinner, TeamLogo, Toggle, useAction,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import { useConfirm } from '../../components/Dialog.jsx';
 
 const blankTeam = {
   name: '', shortName: '', color: '#e11d48', captainName: '', budget: '',
@@ -19,6 +20,7 @@ function upload(file) {
 
 function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
   const { call } = useAdmin();
+  const ask = useConfirm();
   const [run, busy] = useAction();
   const [form, setForm] = useState({ ...team, budget: team.budget ?? '' });
   const [password, setPassword] = useState(null);
@@ -79,7 +81,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
           <button
             type="button"
             className="btn sm"
-            onClick={() => (!team.hasPassword || window.confirm('Generate a new password? The captain\'s devices will be signed out.')) && run(async () => {
+            onClick={async () => (!team.hasPassword || await ask({ title: 'New captain password?', message: `${team.name}'s captain will be signed out on every device and must use the new password.`, tone: 'warning', confirmLabel: 'Generate' })) && run(async () => {
               setPassword((await call(`/admin/teams/${team.id}/password`, { method: 'POST', body: {} })).password);
               onSaved();
             }, 'New password generated')}
@@ -97,7 +99,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
             <span className="chip">{POS_SHORT[p.position]}</span>
             <span className="grow">{p.name}</span>
             <b>{money(p.price, currency)}</b>
-            <button type="button" className="btn sm ghost" onClick={() => window.confirm(`Remove ${p.name} from retained? They go back to the auction pool.`) && run(async () => { await call(`/admin/teams/${team.id}/retained/${p.id}`, { method: 'DELETE' }); onSaved(); })}>✕</button>
+            <button type="button" className="btn sm ghost" onClick={async () => (await ask({ title: 'Remove retained player?', message: `${p.name} goes back into the auction pool and ${team.name} gets the money back.`, tone: 'warning', confirmLabel: 'Remove' })) && run(async () => { await call(`/admin/teams/${team.id}/retained/${p.id}`, { method: 'DELETE' }); onSaved(); })}>✕</button>
           </div>
         ))}
         <div className="form-grid" style={{ marginTop: 10 }}>
@@ -139,7 +141,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
         type="button"
         className="btn danger sm"
         style={{ alignSelf: 'flex-start' }}
-        onClick={() => window.confirm(`Delete ${team.name}? This cannot be undone.`) && run(async () => { await call(`/admin/teams/${team.id}`, { method: 'DELETE' }); onSaved(); }, 'Team deleted')}
+        onClick={async () => (await ask({ title: `Delete ${team.name}?`, message: 'The team, its logo and its captain login are removed for good.', tone: 'danger', confirmLabel: 'Delete team' })) && run(async () => { await call(`/admin/teams/${team.id}`, { method: 'DELETE' }); onSaved(); }, 'Team deleted')}
       >
         Delete team
       </button>
@@ -161,7 +163,7 @@ export default function TeamsAdmin() {
     call('/admin/teams').then(setTeams).catch(() => setTeams([]));
     call('/admin/players').then(setPlayers).catch(() => {});
   }, [call]);
-  useEffect(load, [load]);
+  useEffect(load, [load, auction.state?.dataV]); // live: refresh when data changes anywhere
 
   if (!teams) return <Spinner />;
   const live = Object.fromEntries((auction.state?.teams || []).map((t) => [t.id, t]));

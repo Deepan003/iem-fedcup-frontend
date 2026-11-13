@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, API_URL, assetUrl } from '../lib/api.js';
+import { useAuction } from '../lib/auction.js';
 import { money, POSITIONS, initials } from '../lib/format.js';
 import { Spinner, TeamLogo } from '../components/ui.jsx';
 
@@ -55,6 +56,15 @@ export default function Portal() {
       } else setError('Could not load players.');
     });
   }, [config, code]);
+
+  // Live: when a player is sold/retained or data changes, refresh the list automatically.
+  const { state: live } = useAuction();
+  const liveKey = live ? `${live.dataV}-${live.stats.sold}-${live.stats.unsold}-${live.stats.retained}` : '';
+  useEffect(() => {
+    if (!liveKey || !players) return;
+    portalFetch('/players', code).then(setPlayers).catch(() => {});
+    api('/teams').then(setTeams).catch(() => {});
+  }, [liveKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const teamMap = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
   const list = useMemo(() => {

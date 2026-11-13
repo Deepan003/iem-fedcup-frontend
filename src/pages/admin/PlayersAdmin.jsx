@@ -7,11 +7,13 @@ import {
   Field, Spinner, useAction,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import { useConfirm } from '../../components/Dialog.jsx';
 
 const STATUSES = ['all', 'available', 'sold', 'unsold', 'retained', 'withheld'];
 
 function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
   const { call } = useAdmin();
+  const ask = useConfirm();
   const [run, busy] = useAction();
   const [edit, setEdit] = useState(null);
   const locked = ['sold', 'retained'].includes(p.status);
@@ -94,7 +96,7 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
               </button>
             )}
             {!locked && (
-              <button type="button" className="btn sm ghost" disabled={busy} onClick={() => window.confirm(`Delete ${p.name}?`) && run(async () => { await call(`/admin/players/${p.id}`, { method: 'DELETE' }); onSaved(); })}>✕</button>
+              <button type="button" className="btn sm ghost" disabled={busy} onClick={async () => (await ask({ title: `Delete ${p.name}?`, message: 'The player is removed from the pool. Importing the sheet again would add them back.', tone: 'danger', confirmLabel: 'Delete' })) && run(async () => { await call(`/admin/players/${p.id}`, { method: 'DELETE' }); onSaved(); })}>✕</button>
             )}
           </>
         )}
@@ -105,6 +107,7 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
 
 export default function PlayersAdmin() {
   const { call, auction } = useAdmin();
+  const ask = useConfirm();
   const [players, setPlayers] = useState(null);
   const [tiers, setTiers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -124,6 +127,8 @@ export default function PlayersAdmin() {
     call('/admin/settings').then((s) => setTiers(s.auction.tiers)).catch(() => {});
     call('/admin/teams').then(setTeams).catch(() => {});
   }, [call, load]);
+  // Live: refresh when players change anywhere (import, photos, sales, edits on another device).
+  useEffect(() => { load(); }, [load, auction.state?.dataV, auction.state?.stats?.sold, auction.state?.stats?.unsold, auction.state?.stats?.retained]);
 
   const teamName = (id) => teams.find((t) => t.id === id)?.name || '';
   const list = useMemo(() => (players || []).filter((p) => (pos === 'all' || p.position === pos)
@@ -167,7 +172,7 @@ export default function PlayersAdmin() {
           <h2>Queue order</h2>
           <p className="muted small" style={{ margin: 0 }}>Players come up by position (order set in Rules) and then by this order. Shuffle to make the order random and fair.</p>
           <div className="row wrap">
-            <button type="button" className="btn" disabled={busy || auction.state?.lot?.phase === 'bidding'} onClick={() => window.confirm('Shuffle the order of all available players?') && run(async () => { await call('/admin/players/shuffle', { method: 'POST', body: {} }); load(); }, 'Queue shuffled')}>🔀 Shuffle all</button>
+            <button type="button" className="btn" disabled={busy || auction.state?.lot?.phase === 'bidding'} onClick={async () => (await ask({ title: 'Shuffle the queue?', message: 'Every available player gets a new random place in the auction order.', confirmLabel: 'Shuffle' })) && run(async () => { await call('/admin/players/shuffle', { method: 'POST', body: {} }); load(); }, 'Queue shuffled')}>🔀 Shuffle all</button>
             {POSITIONS.map((p) => <button type="button" key={p} className="btn sm" disabled={busy} onClick={() => run(async () => { await call('/admin/players/shuffle', { method: 'POST', body: { position: p } }); load(); }, `${p}s shuffled`)}>{POS_SHORT[p]}</button>)}
           </div>
         </div>

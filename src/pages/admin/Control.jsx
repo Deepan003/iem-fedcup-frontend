@@ -7,6 +7,7 @@ import {
   Field, Spinner, TeamLogo, useToast,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import { useConfirm } from '../../components/Dialog.jsx';
 
 export default function Control() {
   const { auction } = useAdmin();
@@ -14,6 +15,7 @@ export default function Control() {
     state, connected, viewers, now, emit,
   } = auction;
   const toast = useToast();
+  const ask = useConfirm();
   const [busy, setBusy] = useState(false);
   const [teamId, setTeamId] = useState('');
   const [amount, setAmount] = useState('');
@@ -28,7 +30,7 @@ export default function Control() {
   if (!state) return <Spinner />;
 
   const act = async (action, args = {}, { confirm, ok } = {}) => {
-    if (confirm && !window.confirm(confirm)) return;
+    if (confirm && !(await ask(confirm))) return;
     setBusy(true);
     const res = await emit('admin', { action, args });
     setBusy(false);
@@ -62,9 +64,9 @@ export default function Control() {
           <button type="button" className="btn" disabled={busy || phase === 'bidding'} onClick={() => act('setMode', { mode: state.mode === 'online' ? 'manual' : 'online' })}>
             Switch to {state.mode === 'online' ? 'manual (offline) bidding' : 'online bidding'}
           </button>
-          <button type="button" className="btn" disabled={busy || open || !state.recentSales.length} onClick={() => act('undoLastSale', {}, { confirm: 'Undo the most recent sale? The player goes back to the pool and the money is returned.', ok: 'Sale undone' })}>↶ Undo last sale</button>
-          <button type="button" className="btn" disabled={busy || open || !state.stats.unsold} onClick={() => act('startUnsoldRound', {}, { confirm: 'Put all unsold players back in the queue for a new round?' })}>↻ Unsold round</button>
-          {live && <button type="button" className="btn danger" disabled={busy || open} onClick={() => act('end', {}, { confirm: 'End the auction?' })}>■ End auction</button>}
+          <button type="button" className="btn" disabled={busy || open || !state.recentSales.length} onClick={() => act('undoLastSale', {}, { confirm: { title: 'Undo the last sale?', message: 'The player goes back into the pool and the team gets its money back.', tone: 'warning', confirmLabel: 'Undo sale' }, ok: 'Sale undone' })}>↶ Undo last sale</button>
+          <button type="button" className="btn" disabled={busy || open || !state.stats.unsold} onClick={() => act('startUnsoldRound', {}, { confirm: { title: 'Start an unsold round?', message: 'All unsold players go back into the queue for another round.', confirmLabel: 'Start round' } })}>↻ Unsold round</button>
+          {live && <button type="button" className="btn danger" disabled={busy || open} onClick={() => act('end', {}, { confirm: { title: 'End the auction?', message: 'Bidding stops. You can still undo sales and export the results afterwards.', tone: 'danger', confirmLabel: 'End auction' } })}>■ End auction</button>}
         </div>
       </div>
 
@@ -91,7 +93,7 @@ export default function Control() {
             {phase === 'reveal' && (
               <div className="ctl-actions">
                 <button type="button" className="btn primary big-confirm" disabled={busy || state.paused} onClick={() => act('openBidding')}>🔨 Open bidding</button>
-                <button type="button" className="btn" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: 'Mark this player unsold without bidding?' })}>Mark unsold</button>
+                <button type="button" className="btn" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: { title: 'Mark unsold?', message: 'This player is marked unsold without any bidding.', tone: 'warning', confirmLabel: 'Mark unsold' } })}>Mark unsold</button>
                 <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot')}>Withdraw (back to queue)</button>
               </div>
             )}
@@ -100,8 +102,8 @@ export default function Control() {
               <div className="ctl-actions">
                 <button type="button" className="btn gold big-confirm" disabled={busy} onClick={() => act('closeBidding')}>🔨 Close bidding</button>
                 <button type="button" className="btn" disabled={busy} onClick={() => act('extend', { seconds: 10 })}>+10 seconds</button>
-                <button type="button" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: 'Remove the latest bid?' })}>↶ Undo last bid</button>
-                <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot', {}, { confirm: 'Withdraw this player? All bids on this lot are discarded.' })}>Withdraw lot</button>
+                <button type="button" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: { title: 'Undo the last bid?', message: 'The latest bid is removed and the previous bidder leads again.', tone: 'warning', confirmLabel: 'Undo bid' } })}>↶ Undo last bid</button>
+                <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot', {}, { confirm: { title: 'Withdraw this player?', message: 'All bids on this lot are discarded and the player returns to the queue.', tone: 'warning', confirmLabel: 'Withdraw' } })}>Withdraw lot</button>
               </div>
             )}
 
@@ -112,8 +114,8 @@ export default function Control() {
                     ✓ Confirm SOLD{leader ? ` to ${leader.shortName || leader.name} for ${money(lot.amount, state.currency)}` : ''}
                   </button>
                   <button type="button" className="btn" disabled={busy} onClick={() => act('reopenBidding')}>Reopen bidding</button>
-                  <button type="button" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: 'Remove the latest bid?' })}>↶ Undo last bid</button>
-                  <button type="button" className="btn danger" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: 'Mark this player UNSOLD?' })}>✕ Mark unsold</button>
+                  <button type="button" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: { title: 'Undo the last bid?', message: 'The latest bid is removed and the previous bidder leads again.', tone: 'warning', confirmLabel: 'Undo bid' } })}>↶ Undo last bid</button>
+                  <button type="button" className="btn danger" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: { title: 'Mark unsold?', message: 'Bidding is over and this player is marked unsold.', tone: 'warning', confirmLabel: 'Mark unsold' } })}>✕ Mark unsold</button>
                 </div>
                 {!leader && <p className="muted small" style={{ margin: 0 }}>No bids were placed. Mark the player unsold or reopen bidding.</p>}
               </div>
@@ -141,7 +143,7 @@ export default function Control() {
                     disabled={busy || !teamId || !amount}
                     onClick={() => {
                       const t = teamById(state, teamId);
-                      act('manualSale', { teamId, amount: Number(amount) }, { confirm: `Confirm SOLD: ${lot.player?.name} → ${t?.name} for ${amount}?`, ok: 'Sold!' });
+                      act('manualSale', { teamId, amount: Number(amount) }, { confirm: { title: 'Confirm sale', message: `${lot.player?.name} → ${t?.name} for ${amount} ${state.currency}.`, confirmLabel: 'Confirm sold' }, ok: 'Sold!' });
                     }}
                   >
                     ✓ Confirm sold to this team
