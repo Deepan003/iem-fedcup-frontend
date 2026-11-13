@@ -6,6 +6,7 @@ import LotStage, { SoldOverlay } from '../components/LotStage.jsx';
 import { PurseStrip, SquadCard } from '../components/Teams.jsx';
 import { MiniPlayer, Spinner, TeamLogo } from '../components/ui.jsx';
 import { BrandMark } from '../components/Nav.jsx';
+import TeamReveal from '../components/TeamReveal.jsx';
 
 function Clock() {
   const [t, setT] = useState(() => new Date());
@@ -24,6 +25,8 @@ export default function Studio() {
     state, connected, viewers, now,
   } = useAuction();
   const live = state?.status === 'live';
+  const [showReveal, setShowReveal] = useState(false);
+  useEffect(() => { if (state?.status === 'ended') setShowReveal(true); }, [state?.status]);
 
   return (
     <div className={screen ? 'screen-mode' : ''}>
@@ -36,6 +39,7 @@ export default function Studio() {
           {state && <span className="hide-sm">Round {state.round}</span>}
           {state && <span className="hide-sm">{state.stats.sold} sold · {state.stats.available} left</span>}
           {viewers?.total != null && <span>{viewers.total} watching</span>}
+          {state?.status === 'ended' && <span><button type="button" className="btn sm primary" onClick={() => setShowReveal(true)}>▶ Team reveal</button></span>}
           {!connected ? <span style={{ color: 'var(--amber)' }}>Reconnecting</span> : <span className="hide-sm"><Clock /></span>}
         </div>
       </header>
@@ -103,6 +107,7 @@ export default function Studio() {
           )}
         </main>
       )}
+      {state?.status === 'ended' && showReveal && <TeamReveal state={state} onClose={() => setShowReveal(false)} />}
       <SoldOverlay state={state} />
     </div>
   );

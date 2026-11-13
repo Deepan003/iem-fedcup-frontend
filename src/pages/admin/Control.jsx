@@ -9,6 +9,37 @@ import {
 import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 
+/** Quick switch: how many "Up next" players the studio and captains see (Off / 1 / 2 / 3 / 5). */
+function UpNextControl() {
+  const { call, auction } = useAdmin();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [cur, setCur] = useState(null);
+  useEffect(() => {
+    call('/admin/settings').then((s) => setCur(s.studio.showUpcoming ? s.studio.upcomingCount : 0)).catch(() => {});
+  }, [call, auction.state?.dataV]);
+  const choose = async (n) => {
+    setBusy(true);
+    try {
+      const s = await call('/admin/settings');
+      await call('/admin/settings/studio', { method: 'PUT', body: { ...s.studio, showUpcoming: n > 0, upcomingCount: n || s.studio.upcomingCount } });
+      await call('/admin/settings/captainView', { method: 'PUT', body: { ...s.captainView, showUpcoming: n > 0, upcomingCount: n || s.captainView.upcomingCount } });
+      setCur(n);
+      toast(n ? `Up next: showing ${n} player${n > 1 ? 's' : ''}` : 'Up next hidden', 'ok');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="chip upnext-ctl">
+      Up next
+      {[0, 1, 2, 3, 5].map((n) => <button key={n} type="button" disabled={busy} className={cur === n ? 'on' : ''} onClick={() => choose(n)}>{n === 0 ? 'Off' : n}</button>)}
+    </span>
+  );
+}
+
 export default function Control() {
   const { auction } = useAdmin();
   const {
@@ -54,6 +85,7 @@ export default function Control() {
         <span className="chip">Round {state.round}</span>
         <span className="chip">{state.stats.sold} sold · {state.stats.unsold} unsold · {state.stats.available} left</span>
         {viewers && <span className="chip">👁 {viewers.public} viewers · {viewers.captains} captains</span>}
+        <UpNextControl />
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>

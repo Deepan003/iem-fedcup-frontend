@@ -6,6 +6,7 @@ import {
   Field, Spinner, TeamLogo, Toggle, useAction,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import RetainedEditor from './RetainedEditor.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 
 const blankTeam = {
@@ -91,51 +92,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
         </div>
       </div>
 
-      <div className="card" style={{ background: 'var(--bg-2)' }}>
-        <h2>Retained players</h2>
-        {retained.length === 0 && <p className="muted small">None. Their price is deducted from the budget automatically.</p>}
-        {retained.map((p) => (
-          <div key={p.id} className="list-row small">
-            <span className="chip">{POS_SHORT[p.position]}</span>
-            <span className="grow">{p.name}</span>
-            <b>{money(p.price, currency)}</b>
-            <button type="button" className="btn sm ghost" onClick={async () => (await ask({ title: 'Remove retained player?', message: `${p.name} goes back into the auction pool and ${team.name} gets the money back.`, tone: 'warning', confirmLabel: 'Remove' })) && run(async () => { await call(`/admin/teams/${team.id}/retained/${p.id}`, { method: 'DELETE' }); onSaved(); })}>✕</button>
-          </div>
-        ))}
-        <div className="form-grid" style={{ marginTop: 10 }}>
-          <Field label="From player list">
-            <select className="input" value={ret.playerId} onChange={(e) => setRet({ ...ret, playerId: e.target.value })}>
-              <option value="">New player (type below)</option>
-              {pool.map((p) => <option key={p.id} value={p.id}>{POS_SHORT[p.position]} · {p.name}</option>)}
-            </select>
-          </Field>
-          {!ret.playerId && <Field label="Name"><input className="input" value={ret.name} onChange={(e) => setRet({ ...ret, name: e.target.value })} /></Field>}
-          {!ret.playerId && (
-            <Field label="Position">
-              <select className="input" value={ret.position} onChange={(e) => setRet({ ...ret, position: e.target.value })}>{POSITIONS.map((p) => <option key={p}>{p}</option>)}</select>
-            </Field>
-          )}
-          <Field label="Retention price"><input className="input" inputMode="numeric" value={ret.price} onChange={(e) => setRet({ ...ret, price: e.target.value.replace(/\D/g, '') })} /></Field>
-        </div>
-        <button
-          type="button"
-          className="btn sm"
-          style={{ marginTop: 10 }}
-          disabled={busy || ret.price === '' || (!ret.playerId && !ret.name)}
-          onClick={() => run(async () => {
-            await call(`/admin/teams/${team.id}/retained`, {
-              method: 'POST',
-              body: ret.playerId ? { playerId: ret.playerId, price: Number(ret.price) } : { name: ret.name, position: ret.position, price: Number(ret.price) },
-            });
-            setRet({
-              playerId: '', name: '', position: 'Forward', price: '',
-            });
-            onSaved();
-          }, 'Retained player added')}
-        >
-          Add retained player
-        </button>
-      </div>
+      <RetainedEditor team={team} liveTeam={liveTeam} players={players} currency={currency} onSaved={onSaved} />
 
       <button
         type="button"

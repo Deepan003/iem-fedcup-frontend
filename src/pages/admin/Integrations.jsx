@@ -86,6 +86,17 @@ export default function Integrations() {
   if (!info) return <Spinner />;
   const job = jobs.photos;
 
+  const exportXlsx = () => run(async () => {
+    const res = await fetch(`${API_URL}/api/admin/export.xlsx`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error('Export failed');
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fedcup-auction-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, 'Excel downloaded');
+
   const exportCsv = () => run(async () => {
     const res = await fetch(`${API_URL}/api/admin/export.csv`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) throw new Error('Export failed');
@@ -243,7 +254,9 @@ export default function Integrations() {
         <div className="card stack">
           <h2>Results & audit</h2>
           <div className="row wrap">
-            <button type="button" className="btn" onClick={exportCsv}>⬇ Export results (CSV)</button>
+            <button type="button" className="btn primary" onClick={exportXlsx}>⬇ Excel (.xlsx)</button>
+            <a className="btn" href="/admin/report" target="_blank" rel="noreferrer">⬇ PDF report</a>
+            <button type="button" className="btn ghost" onClick={exportCsv}>CSV</button>
             <button type="button" className="btn ghost" onClick={() => run(async () => setLogs(await call('/admin/logs?limit=100')))}>Show audit log</button>
           </div>
           {logs && (

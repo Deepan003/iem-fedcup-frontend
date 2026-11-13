@@ -16,6 +16,7 @@ const TeamsAdmin = lazy(() => import('./TeamsAdmin.jsx'));
 const PlayersAdmin = lazy(() => import('./PlayersAdmin.jsx'));
 const SettingsAdmin = lazy(() => import('./SettingsAdmin.jsx'));
 const Integrations = lazy(() => import('./Integrations.jsx'));
+const Report = lazy(() => import('./Report.jsx'));
 
 const AdminCtx = createContext(null);
 export const useAdmin = () => useContext(AdminCtx);
@@ -113,6 +114,7 @@ function Shell({ auth, onLogout, onAuthChange }) {
           <NavLink to="/admin/players">👟 Players</NavLink>
           <NavLink to="/admin/settings">⚙️ Rules & views</NavLink>
           <NavLink to="/admin/integrations">🔌 Data & storage</NavLink>
+          <NavLink to="/admin/report">📄 Report & PDF</NavLink>
           <div className="spacer" style={{ flex: 1 }} />
           <a href="/studio" target="_blank" rel="noreferrer">📺 Open studio ↗</a>
           <button type="button" className="link" onClick={onLogout}>↩ Sign out</button>
@@ -125,6 +127,7 @@ function Shell({ auth, onLogout, onAuthChange }) {
               <Route path="players" element={<PlayersAdmin />} />
               <Route path="settings" element={<SettingsAdmin ChangePassword={ChangePassword} onAuthChange={onAuthChange} />} />
               <Route path="integrations" element={<Integrations />} />
+              <Route path="report" element={<Report />} />
             </Routes>
           </Suspense>
         </section>

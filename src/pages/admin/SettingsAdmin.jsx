@@ -15,6 +15,52 @@ function NumField({ label, value, onChange, hint }) {
   );
 }
 
+/** Increment levels: "until the price reaches X, each bid adds Y". */
+function IncrementLevels({ value, base, currency, onChange }) {
+  const levels = value.length ? value : [{ upTo: null, step: 10 }];
+  const upd = (i, patch) => onChange(levels.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  const remove = (i) => onChange(levels.filter((_, j) => j !== i).map((l, j, arr) => (j === arr.length - 1 ? { ...l, upTo: null } : l)));
+  const addLevel = () => {
+    const prev = levels.length > 1 ? levels[levels.length - 2].upTo || 0 : 0;
+    const last = levels[levels.length - 1];
+    onChange([...levels.slice(0, -1), { upTo: prev + (last.step || 10) * 10, step: last.step || 10 }, { upTo: null, step: (last.step || 10) * 2 }]);
+  };
+  const stepFor = (amt) => (levels.find((l) => l.upTo == null || amt < l.upTo) || levels[levels.length - 1]).step || 1;
+  const seq = [];
+  let p = Number(base) || 0;
+  for (let k = 0; k < 9 && p < 1e9; k += 1) { seq.push(p); p += stepFor(p); }
+  const fmt = (n) => Number(n).toLocaleString('en-IN');
+  return (
+    <div className="inc-box">
+      <h2 style={{ margin: '10px 0 4px' }}>Bid increment levels</h2>
+      <p className="muted small" style={{ margin: 0 }}>How much each new bid adds. It goes up automatically as the price climbs, and captains always see the exact next amount on their BID button.</p>
+      {levels.map((l, i) => {
+        const last = i === levels.length - 1;
+        const from = i === 0 ? 0 : levels[i - 1].upTo || 0;
+        return (
+          <div key={i} className="inc-row">
+            <span className="inc-idx">L{i + 1}</span>
+            {last ? (
+              <span className="inc-text">{i === 0 ? 'At any price' : <>From <b>{fmt(from)}</b> and above</>}</span>
+            ) : (
+              <span className="inc-text">{i === 0 ? 'From the base price' : <>From <b>{fmt(from)}</b></>} until it reaches
+                <input className="input" inputMode="numeric" value={l.upTo ?? ''} onChange={(e) => upd(i, { upTo: e.target.value === '' ? '' : Number(e.target.value.replace(/\D/g, '')) })} />
+              </span>
+            )}
+            <span className="inc-text">each bid adds <span className="inc-plus">+</span>
+              <input className="input" inputMode="numeric" value={l.step ?? ''} onChange={(e) => upd(i, { step: e.target.value === '' ? '' : Number(e.target.value.replace(/\D/g, '')) })} />
+              <span className="muted">{currency}</span>
+            </span>
+            {!last && <button type="button" className="btn sm ghost" onClick={() => remove(i)}>✕</button>}
+          </div>
+        );
+      })}
+      <button type="button" className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={addLevel}>+ Add a level</button>
+      <div className="inc-preview"><span className="label">Example from a base of {fmt(base)}</span><div>{seq.map((n) => fmt(n)).join('  →  ')}  →  …</div></div>
+    </div>
+  );
+}
+
 function AuctionRules({ value, onSave }) {
   const [a, setA] = useState(value);
   const set = (k) => (v) => setA((x) => ({ ...x, [k]: v }));
@@ -48,31 +94,7 @@ function AuctionRules({ value, onSave }) {
       ))}
       <button type="button" className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => set('tiers')([...a.tiers, { name: 'New tier', basePrice: a.defaultBasePrice, color: '#94a3b8' }])}>+ Add tier</button>
 
-      <h2 style={{ marginTop: 10 }}>Bid increments</h2>
-      <p className="muted small" style={{ margin: 0 }}>Example: +5 while the price is below 100, then +10 below 300, then +20 above. Leave "below" empty on the last row.</p>
-      {a.increments.map((s, i) => (
-        <div key={i} className="row wrap"> {/* eslint-disable-line react/no-array-index-key */}
-          <span className="muted small" style={{ width: 70 }}>{i === a.increments.length - 1 ? 'Above that' : 'Below'}</span>
-          {i < a.increments.length - 1 && <input className="input" style={{ maxWidth: 110 }} inputMode="numeric" value={s.upTo ?? ''} onChange={(e) => set('increments')(a.increments.map((x, j) => (j === i ? { ...x, upTo: num(e.target.value.replace(/\D/g, '')) } : x)))} />}
-          <span className="muted small">step +</span>
-          <input className="input" style={{ maxWidth: 90 }} inputMode="numeric" value={s.step} onChange={(e) => set('increments')(a.increments.map((x, j) => (j === i ? { ...x, step: num(e.target.value.replace(/\D/g, '')) } : x)))} />
-          {a.increments.length > 1 && <button type="button" className="btn sm ghost" onClick={() => set('increments')(a.increments.filter((_, j) => j !== i).map((x, j, arr) => (j === arr.length - 1 ? { ...x, upTo: null } : x)))}>✕</button>}
-        </div>
-      ))}
-      <button
-        type="button"
-        className="btn sm"
-        style={{ alignSelf: 'flex-start' }}
-        onClick={() => {
-          const inc = [...a.increments];
-          const last = inc.pop();
-          const prevUp = inc.length ? inc[inc.length - 1].upTo : 0;
-          inc.push({ upTo: (prevUp || 0) + 100, step: last.step }, { upTo: null, step: last.step * 2 });
-          set('increments')(inc);
-        }}
-      >
-        + Add slab
-      </button>
+      <IncrementLevels value={a.increments} base={a.defaultBasePrice} currency={a.currency} onChange={set('increments')} />
 
       <h2 style={{ marginTop: 10 }}>Order of positions</h2>
       {a.positionOrder.map((p, i) => (
