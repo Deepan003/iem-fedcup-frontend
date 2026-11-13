@@ -11,6 +11,7 @@ import { PurseStrip, SquadCard } from '../components/Teams.jsx';
 import {
   Field, MiniPlayer, Spinner, TeamLogo, useAction, useToast,
 } from '../components/ui.jsx';
+import { RollingNumber } from '../components/fx.jsx';
 
 /* --------------------------------- login --------------------------------- */
 function CaptainLogin({ onLogin }) {
@@ -31,15 +32,16 @@ function CaptainLogin({ onLogin }) {
   };
   return (
     <div className="auth-wrap">
-      <form className="card auth-card stack" onSubmit={submit}>
-        <h1 className="display" style={{ fontSize: 44 }}>Captain room</h1>
-        <p className="muted" style={{ margin: 0 }}>Choose your team and enter the password given by the organisers.</p>
+      <form className="auth-card stack" style={{ gap: 18 }} onSubmit={submit}>
+        <span className="idx">Restricted · Captains only</span>
+        <h1 className="display"><span className="mask"><span>Captain</span></span><span className="mask"><span className="grad-text" style={{ animationDelay: '0.08s' }}>room</span></span></h1>
+        <p className="muted">Choose your club and enter the password from the organisers.</p>
         {!teams ? <Spinner /> : (
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+          <div className="team-pick">
             {teams.map((t) => (
-              <button type="button" key={t.id} className="btn" style={{ height: 'auto', padding: 10, borderRadius: 14, flexDirection: 'column', borderColor: teamId === t.id ? t.color : undefined, boxShadow: teamId === t.id ? `0 0 0 2px ${t.color} inset` : undefined }} onClick={() => setTeamId(t.id)}>
-                <TeamLogo team={t} size={40} />
-                <span className="small ellipsis" style={{ maxWidth: '100%' }}>{t.name}</span>
+              <button type="button" key={t.id} className={teamId === t.id ? 'on' : ''} style={{ '--c': t.color }} onClick={() => setTeamId(t.id)}>
+                <TeamLogo team={t} size={44} />
+                <span className="ellipsis" style={{ maxWidth: '100%' }}>{t.name}</span>
               </button>
             ))}
           </div>
@@ -122,6 +124,8 @@ function SquadBuilder({ team, currency, plan, formations, onChange }) {
         <span className="chip">{squad.length} player{squad.length === 1 ? '' : 's'}</span>
       </div>
       <div className="pitch">
+        <span className="box" style={{ top: 0, borderTop: 0 }} />
+        <span className="box" style={{ bottom: 0, borderBottom: 0 }} />
         {slots.map((s) => {
           const p = byId[lineup[s.id]];
           return (
@@ -132,15 +136,15 @@ function SquadBuilder({ team, currency, plan, formations, onChange }) {
           );
         })}
       </div>
-      <p className="muted small" style={{ margin: 0 }}>{sel ? 'Now tap a bench player to put them in this spot (or tap the spot again to cancel).' : 'Tap a spot on the pitch, then a bench player, to change your lineup. Only you can see this.'}</p>
-      <div className="stack" style={{ gap: 6 }}>
-        <div className="tiny muted">Bench</div>
-        {bench.length === 0 && <div className="muted small">No bench players</div>}
+      <p className="muted small">{sel ? 'Now tap a bench player to put them in this spot (or tap the spot again to cancel).' : 'Tap a spot on the pitch, then a bench player, to change your lineup. Only you can see this.'}</p>
+      <div>
+        <div className="label" style={{ marginBottom: 4 }}>Bench</div>
+        {bench.length === 0 && <div className="tiny" style={{ padding: '10px 0' }}>No bench players</div>}
         {bench.map((p) => (
-          <button type="button" key={p.id} className="history-row" style={{ border: sel ? '1px dashed var(--brand-2)' : '1px solid transparent', cursor: sel ? 'pointer' : 'default', textAlign: 'left' }} onClick={() => sel && assign(sel, p.id)}>
-            <span className="chip">{POS_SHORT[p.position]}</span>
-            <span className="grow ellipsis">{p.name}{p.retained ? ' (R)' : ''}</span>
-            <span className="muted">{money(p.price, currency)}</span>
+          <button type="button" key={p.id} className="bench-row" style={{ cursor: sel ? 'pointer' : 'default', color: sel ? 'var(--bone)' : undefined }} onClick={() => sel && assign(sel, p.id)}>
+            <span className="label">{POS_SHORT[p.position]}</span>
+            <span className="ellipsis">{p.name}{p.retained ? ' · R' : ''}</span>
+            <span className="mono small muted">{money(p.price, currency)}</span>
           </button>
         ))}
         {sel && lineup[sel] && <button type="button" className="btn sm ghost" onClick={() => assign(sel, null)}>Move to bench</button>}
@@ -217,26 +221,38 @@ function CaptainRoom({ auth, onLogout }) {
   const others = state.teams.filter((t) => t.id !== auth.team.id);
 
   return (
-    <main className="container studio" style={{ paddingBottom: 0 }}>
-      <div className="card row" style={{ '--c': me?.color, borderColor: me?.color }}>
-        <TeamLogo team={me} size={46} />
-        <div className="grow">
-          <b className="ellipsis" style={{ display: 'block', fontSize: 18 }}>{me?.name}</b>
-          <span className="muted small">{me?.count} player{me?.count === 1 ? '' : 's'} · {money(me?.purse, state.currency)} left</span>
+    <main className="container studio" style={{ paddingBottom: 0, paddingTop: 80 }}>
+      <div className="studio-bg" />
+      <div className="cap-head" style={{ borderBottom: `2px solid ${me?.color || 'var(--rule)'}` }}>
+        <TeamLogo team={me} size={48} />
+        <div style={{ minWidth: 0 }}>
+          <div className="display ellipsis" style={{ fontSize: 30 }}>{me?.name}</div>
+          <span className="tiny">{me?.count} player{me?.count === 1 ? '' : 's'} · max bid {money(state.me?.maxBidForLot ?? me?.maxBid, state.currency)}</span>
         </div>
-        {!connected && <span className="chip" style={{ color: '#fcd34d' }}>Offline</span>}
+        <div style={{ textAlign: 'right' }}>
+          <div className="money"><RollingNumber value={me?.purse ?? 0} /></div>
+          <span className="tiny">{state.currency} left</span>
+        </div>
+      </div>
+      <div className="row" style={{ justifyContent: 'space-between', marginTop: -14 }}>
+        {connected ? <span className="tiny" style={{ color: 'var(--go)' }}>● Connected</span> : <span className="tiny" style={{ color: 'var(--amber)' }}>● Reconnecting</span>}
         <button type="button" className="btn sm ghost" onClick={onLogout}>Sign out</button>
       </div>
 
       {lot && watched(lot.playerId) && ['reveal', 'bidding'].includes(lot.phase) && (
-        <div className="live-banner"><span>★</span><b>A player on your watchlist is on the block!</b></div>
+        <div className="watch-banner">★ A player on your watchlist is on the block</div>
       )}
 
       <LotStage state={state} now={now} showHistory={cv.showBidHistory !== false} />
 
       <div className="bid-bar">
         <button type="button" className={`bid-btn ${leading ? 'leading' : ''}`} disabled={!!reason || leading || pending} onClick={placeBid}>
-          {leading ? '✓ You have the highest bid' : pending ? 'Sending…' : reason || `BID ${money(lot.nextAmount, state.currency)}`}
+          {leading ? '✓ You lead' : pending ? 'Sending…' : reason || (
+            <>
+              <span className="k">Bid</span>
+              <span className="v"><RollingNumber value={lot.nextAmount} /> <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{state.currency}</span></span>
+            </>
+          )}
         </button>
       </div>
 

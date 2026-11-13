@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, API_URL } from '../lib/api.js';
-import { money, POSITIONS } from '../lib/format.js';
-import {
-  Field, MiniPlayer, Spinner, TeamLogo,
-} from '../components/ui.jsx';
+import { api, API_URL, assetUrl } from '../lib/api.js';
+import { money, POSITIONS, initials } from '../lib/format.js';
+import { Spinner, TeamLogo } from '../components/ui.jsx';
 
 const STATUS = {
-  sold: 'Sold', retained: 'Retained', unsold: 'Unsold', available: 'In the auction pool',
+  sold: 'Sold', retained: 'Retained', unsold: 'Unsold', available: 'In the pool',
 };
 
 async function portalFetch(path, code) {
@@ -14,6 +12,18 @@ async function portalFetch(path, code) {
   const body = await res.json().catch(() => null);
   if (!res.ok) throw Object.assign(new Error(body?.error || 'ERROR'), { code: body?.error });
   return body;
+}
+
+function Gate({ title, children }) {
+  return (
+    <div className="auth-wrap">
+      <div className="auth-card stack" style={{ gap: 18 }}>
+        <span className="idx">Player portal</span>
+        <h1 className="display"><span className="mask"><span>{title}</span></span></h1>
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export default function Portal() {
@@ -41,7 +51,7 @@ export default function Portal() {
       if (e.code === 'PORTAL_CODE_REQUIRED') {
         sessionStorage.removeItem('fedcup.portal');
         setCode('');
-        setError('Wrong access code.');
+        setError('That access code is not right.');
       } else setError('Could not load players.');
     });
   }, [config, code]);
@@ -57,51 +67,53 @@ export default function Portal() {
 
   if (!config) return <div className="auth-wrap">{error ? <p className="muted">{error}</p> : <Spinner />}</div>;
   if (config.portalMode === 'off') {
-    return <div className="auth-wrap"><div className="card auth-card"><h1 className="display" style={{ fontSize: 40 }}>Player portal</h1><p className="muted">The player portal is closed right now. Check back after the auction.</p></div></div>;
+    return <Gate title="Closed"><p className="muted">The player portal opens after the auction. Check back soon.</p></Gate>;
   }
   if (config.portalMode === 'code' && !code) {
     return (
-      <div className="auth-wrap">
-        <form className="card auth-card stack" onSubmit={(e) => { e.preventDefault(); sessionStorage.setItem('fedcup.portal', codeInput.trim()); setCode(codeInput.trim()); }}>
-          <h1 className="display" style={{ fontSize: 40 }}>Player portal</h1>
-          <p className="muted" style={{ margin: 0 }}>Enter the access code shared by the organisers.</p>
-          {error && <p style={{ color: '#fca5a5', margin: 0 }}>{error}</p>}
-          <Field label="Access code"><input className="input" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} /></Field>
-          <button className="btn primary" disabled={!codeInput.trim()}>Continue</button>
+      <Gate title="Access">
+        <form className="stack" onSubmit={(e) => { e.preventDefault(); sessionStorage.setItem('fedcup.portal', codeInput.trim()); setCode(codeInput.trim()); }}>
+          <p className="muted">Enter the access code shared by the organisers.</p>
+          {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
+          <input className="input" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} placeholder="Access code" />
+          <button className="btn primary lg" disabled={!codeInput.trim()}>Continue <span className="arrow">→</span></button>
         </form>
-      </div>
+      </Gate>
     );
   }
 
   return (
-    <main className="container section" style={{ paddingTop: 30 }}>
-      <h1 className="section-title">Find <em>your</em> name</h1>
-      <p className="muted">Search for yourself to see whether you were picked, by which team and for how much.</p>
-      <div className="row wrap" style={{ margin: '18px 0' }}>
-        <input className="input grow" style={{ minWidth: 220 }} placeholder="Type your name…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-        <div className="tabs" style={{ flex: 'none' }}>
-          {['All', ...POSITIONS].map((p) => <button type="button" key={p} className={pos === p ? 'on' : ''} onClick={() => setPos(p)}>{p === 'All' ? 'All' : `${p}s`}</button>)}
-        </div>
+    <main className="container" style={{ padding: '120px 0 80px' }}>
+      <div className="sect-head" style={{ marginBottom: 30 }}>
+        <span className="idx">Player portal</span>
+        <h1 className="big-title"><span className="mask"><span>Find your</span></span><span className="mask"><span style={{ animationDelay: '0.08s' }}><em>name.</em></span></span></h1>
+      </div>
+      <label className="search-line">
+        <span className="sr-only">Search players</span>
+        <input placeholder="Type here" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <span className="label" style={{ paddingBottom: 10 }}>{list.length} found</span>
+      </label>
+      <div className="tabs" style={{ margin: '18px 0 8px' }}>
+        {['All', ...POSITIONS].map((p) => <button type="button" key={p} className={pos === p ? 'on' : ''} onClick={() => setPos(p)}>{p === 'All' ? 'Everyone' : `${p}s`}</button>)}
       </div>
       {!players ? <Spinner /> : (
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-          {list.length === 0 && <p className="muted">No players match.</p>}
+        <div>
+          {list.length === 0 && <p className="muted" style={{ padding: '30px 0' }}>Nobody by that name yet.</p>}
           {list.slice(0, 120).map((p, i) => {
             const t = p.teamId ? teamMap[p.teamId] : null;
+            const url = assetUrl(p.thumbUrl || p.photoUrl);
             return (
-              <div key={p.id} className="result-card" style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}>
-                <MiniPlayer player={p} />
-                <div className="grow stack" style={{ gap: 4 }}>
-                  <b className="ellipsis">{p.name}</b>
-                  <span className="muted small">{p.position}{p.year ? ` · ${p.year}` : ''}</span>
-                  <span className="row small">
-                    {t && <TeamLogo team={t} size={22} />}
-                    <b style={{ color: p.status === 'sold' || p.status === 'retained' ? '#86efac' : undefined }}>
-                      {STATUS[p.status] || p.status}{t ? ` · ${t.name}` : ''}
-                    </b>
-                  </span>
-                  {p.price != null && <span className="small">for <b>{money(p.price, config.currency)}</b></span>}
+              <div key={p.id} className="result" style={{ animationDelay: `${Math.min(i, 14) * 25}ms` }}>
+                <div className="mini" style={{ width: '100%' }}>{url ? <img src={url} alt="" loading="lazy" /> : <div className="ph" style={{ fontSize: 22 }}>{initials(p.name)}</div>}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="nm ellipsis">{p.name}</div>
+                  <div className="row wrap" style={{ gap: 12, marginTop: 6 }}>
+                    <span className="tiny">{p.position}{p.year ? ` · ${p.year}` : ''}</span>
+                    {t && <span className="row tiny" style={{ gap: 6, color: 'var(--bone)' }}><TeamLogo team={t} size={18} />{t.name}</span>}
+                    {p.price != null && <span className="tiny" style={{ color: 'var(--bone)' }}>{money(p.price, config.currency)}</span>}
+                  </div>
                 </div>
+                <span className={`stamp ${p.status}`}>{STATUS[p.status] || p.status}</span>
               </div>
             );
           })}

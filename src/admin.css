@@ -1,11 +1,11 @@
 /* Admin / control room */
 .admin-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100dvh; }
 .admin-side { position: sticky; top: 0; height: 100dvh; padding: 18px 12px; border-right: 1px solid var(--line); background: var(--bg-2); display: flex; flex-direction: column; gap: 4px; }
-.admin-side a, .admin-side button.link { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; color: var(--muted); font-weight: 600; font-size: 14px; background: none; border: 0; cursor: pointer; text-align: left; }
-.admin-side a.active, .admin-side a:hover { background: var(--surface-2); color: var(--text); }
+.admin-side a, .admin-side button.link { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 2px; color: var(--dim); font-family: var(--mono); font-weight: 500; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; background: none; border: 0; cursor: pointer; text-align: left; border-left: 2px solid transparent; transition: color .3s, background .3s, border-color .3s; }
+.admin-side a.active, .admin-side a:hover { background: var(--ink-3); color: var(--bone); border-left-color: var(--signal); }
 .admin-main { padding: 22px; min-width: 0; }
-.admin-main h1 { font-family: var(--font-display); font-size: 42px; font-weight: 400; margin-bottom: 14px; }
-.admin-main h2 { font-size: 16px; margin-bottom: 10px; }
+.admin-main h1 { font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(44px, 6vw, 72px); line-height: .9; margin-bottom: 18px; background: var(--grad-bone); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.admin-main h2 { font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 12px; }
 @media (max-width: 860px) {
   .admin-shell { grid-template-columns: 1fr; }
   .admin-side { position: sticky; top: 0; z-index: 30; height: auto; flex-direction: row; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -24,11 +24,11 @@
 .table .input { min-height: 34px; padding: 6px 8px; }
 .table-wrap { overflow: auto; max-height: 70vh; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .ctl-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-.ctl-actions .btn { border-radius: 14px; min-height: 52px; white-space: normal; text-align: center; line-height: 1.15; }
+.ctl-actions .btn { border-radius: 2px; min-height: 52px; white-space: normal; text-align: center; line-height: 1.15; }
 .big-confirm { min-height: 70px !important; font-size: 20px; }
 .status-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
 .danger-zone { border-color: rgba(239, 68, 68, 0.4); }
-.thumb { width: 40px; height: 50px; border-radius: 8px; object-fit: cover; background: var(--surface-2); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+.thumb { width: 40px; height: 50px; border-radius: 2px; object-fit: cover; background: var(--surface-2); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
 .progress { height: 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .progress i { display: block; height: 100%; background: var(--ok); transition: width 0.3s; }
 .list-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }

@@ -2,6 +2,7 @@ import {
   createContext, useCallback, useContext, useEffect, useRef, useState,
 } from 'react';
 import { assetUrl } from '../lib/api.js';
+import { useTilt } from './fx.jsx';
 import {
   POS_COLOR, POS_SHORT, initials, onColor,
 } from '../lib/format.js';
@@ -31,8 +32,8 @@ export function ToastProvider({ children }) {
 export function Spinner({ size = 28 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 50 50" aria-label="Loading">
-      <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,.15)" strokeWidth="5" />
-      <circle cx="25" cy="25" r="20" fill="none" stroke="var(--brand)" strokeWidth="5" strokeLinecap="round" strokeDasharray="90 150">
+      <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="3" />
+      <circle cx="25" cy="25" r="20" fill="none" stroke="var(--signal)" strokeWidth="3" strokeDasharray="40 150">
         <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.9s" repeatCount="indefinite" />
       </circle>
     </svg>
@@ -114,29 +115,35 @@ export function TeamLogo({ team, size = 36 }) {
 }
 
 export function PosBadge({ position }) {
-  return <span className="pos-badge" style={{ background: POS_COLOR[position] || '#475569' }}>{POS_SHORT[position] || position}</span>;
+  return <span className="pos-badge" style={{ color: POS_COLOR[position] || 'var(--bone)' }}>{POS_SHORT[position] || position}</span>;
 }
 
 export function TierBadge({ tier, color }) {
   if (!tier) return null;
-  return <span className="tier-badge" style={{ background: color || '#cbd5e1' }}>{tier}</span>;
+  return <span className="tier-badge" style={{ background: color ? `linear-gradient(120deg, ${color}, #fff6)` : 'var(--bone)', backgroundColor: color || 'var(--bone)' }}>{tier}</span>;
 }
 
-export function PlayerCard({ player, className = '' }) {
+/** Trading-card style portrait with 3D tilt, foil sheen on entry and a tier-coloured edge. */
+export function PlayerCard({ player, enter = false, showName = true }) {
+  const tilt = useTilt(9);
   if (!player) return null;
   const url = assetUrl(player.photoUrl);
   return (
-    <div className={`pcard ${className}`}>
-      {url ? <img src={url} alt={player.name} decoding="async" /> : <div className="ph">{initials(player.name)}</div>}
-      <div className="pcard-top">
-        <PosBadge position={player.position} />
-        <TierBadge tier={player.tier} color={player.tierColor} />
-      </div>
-      <div className="pcard-bottom">
-        <div className="pcard-name">{player.name}</div>
-        <div className="muted small" style={{ fontWeight: 600 }}>
-          {player.position}{player.year ? ` · ${player.year} year` : ''}
+    <div className="pcard-wrap">
+      <div ref={tilt} className={`pcard ${enter ? 'enter' : ''}`} style={{ '--tc': player.tierColor || 'var(--signal)' }}>
+        {url ? <img src={url} alt={player.name} decoding="async" /> : <div className="ph">{initials(player.name)}</div>}
+        <span className="pcard-edge" />
+        <span className="sheen" />
+        <div className="pcard-top">
+          <PosBadge position={player.position} />
+          <TierBadge tier={player.tier} color={player.tierColor} />
         </div>
+        {showName && (
+          <div className="pcard-bottom">
+            <div className="pcard-name">{player.name}</div>
+            <div className="tiny" style={{ marginTop: 6 }}>{player.position}{player.year ? ` · ${player.year}` : ''}</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -147,7 +154,7 @@ export function MiniPlayer({ player, extra }) {
   return (
     <div className="mini">
       {url ? <img src={url} alt="" loading="lazy" /> : <div className="ph">{initials(player.name)}</div>}
-      <div className="ellipsis">{player.name}{extra}</div>
+      <div className="cap ellipsis">{player.name}{extra}</div>
     </div>
   );
 }
