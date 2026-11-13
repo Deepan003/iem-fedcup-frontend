@@ -5,8 +5,54 @@ import {
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 
+const mb = (b) => (b >= 1024 * 1024 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(0, Math.round(b / 1024))} KB`);
+
+/** How full the free MongoDB (512 MB) is, with what is using the space. */
+function StorageMeter({ call, refreshKey }) {
+  const [s, setS] = useState(null);
+  const [err, setErr] = useState('');
+  const load = useCallback(() => {
+    setErr('');
+    call('/admin/storage').then(setS).catch((e) => setErr(e.message));
+  }, [call]);
+  useEffect(load, [load, refreshKey]);
+
+  const pct = s ? Math.min(100, s.percent) : 0;
+  const color = pct >= 85 ? 'var(--danger)' : pct >= 65 ? 'var(--amber)' : 'var(--go)';
+  const others = s ? s.databases.filter((d) => !d.current && d.bytes > 0) : [];
+  return (
+    <div className="card stack" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <h2 style={{ margin: 0 }}>Database storage</h2>
+        <button type="button" className="btn sm ghost" onClick={load}>↻ Refresh</button>
+      </div>
+      {err && <p className="small" style={{ color: 'var(--danger)', margin: 0 }}>{err}</p>}
+      {!s ? (!err && <Spinner />) : (
+        <>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <span className="display" style={{ fontSize: 44 }}>{mb(s.totalBytes)}</span>
+            <span className="label">of {mb(s.limitBytes)} free tier · {s.percent}% used</span>
+          </div>
+          <div className="progress" style={{ height: 10 }}><i style={{ width: `${pct}%`, background: color }} /></div>
+          <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+            <div><span className="label">Auction data ({s.auction.database})</span><div><b>{mb(s.auction.bytes)}</b></div></div>
+            <div><span className="label">Player photos & logos</span><div><b>{mb(s.images.bytes)}</b> <span className="muted small">· {s.images.count} files{s.images.storedIn === 'r2' ? ' (new uploads go to R2)' : ''}</span></div></div>
+            {others.map((d) => <div key={d.name}><span className="label">Other: {d.name}</span><div><b>{mb(d.bytes)}</b></div></div>)}
+          </div>
+          {others.some((d) => d.name.startsWith('sample_')) && (
+            <p className="muted small" style={{ margin: 0 }}>The <b>sample_</b> databases are MongoDB's demo data and are not used by the auction. Delete them in Atlas → Browse collections to free space.</p>
+          )}
+          {pct >= 85 && <p className="small" style={{ color: 'var(--danger)', margin: 0 }}>Storage is nearly full. Delete sample data or old photos before importing more.</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Integrations() {
-  const { call, token, jobs } = useAdmin();
+  const {
+    call, token, jobs, setJobs,
+  } = useAdmin();
   const [info, setInfo] = useState(null);
   const [gjson, setGjson] = useState('');
   const [sheet, setSheet] = useState({ url: '', tab: '' });
@@ -16,7 +62,12 @@ export default function Integrations() {
   const [preview, setPreview] = useState(null);
   const [testResult, setTestResult] = useState(null);
   const [logs, setLogs] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [lastResult, setLastResult] = useState(null);
   const [run, busy] = useAction();
+  const loadStatus = useCallback(() => call('/admin/import/status').then(setStatus).catch(() => {}), [call]);
+  const jobDoneAt = jobs.photos && !jobs.photos.running ? jobs.photos.finishedAt : 0;
+  useEffect(() => { loadStatus(); }, [loadStatus, jobDoneAt]);
 
   const load = useCallback(() => call('/admin/integrations').then((d) => {
     setInfo(d);
@@ -46,7 +97,8 @@ export default function Integrations() {
   return (
     <>
       <h1>Data & storage</h1>
-      <p className="muted" style={{ marginTop: -6 }}>Credentials are stored encrypted in the database and never shown again in full. See the backend README for step-by-step setup.</p>
+      <p className="muted" style={{ marginTop: -6, marginBottom: 14 }}>Credentials are stored encrypted in the database and never shown again in full. See the backend README for step-by-step setup.</p>
+      <StorageMeter call={call} refreshKey={job && !job.running ? job.finishedAt : 0} />
       <div className="cols">
         <div className="card stack">
           <h2>1 · Google (Sheets + Drive)</h2>
@@ -90,27 +142,96 @@ export default function Integrations() {
 
         <div className="card stack">
           <h2>4 · Import players</h2>
+          {status && (
+            <div className="small stack" style={{ gap: 4 }}>
+              <div className="row" style={{ justifyContent: 'space-between' }}><span className="label">Players in database</span><b>{status.players.total}</b></div>
+              <div className="row" style={{ justifyContent: 'space-between' }}><span className="label">From the sheet</span><b>{status.players.fromSheet}</b></div>
+              {status.lastImport ? (
+                <span className="muted">Last import {new Date(status.lastImport.at).toLocaleString()} · {status.lastImport.total ?? '—'} rows · {status.lastImport.created} new · {status.lastImport.updated} updated</span>
+              ) : <span className="muted">Not imported yet.</span>}
+            </div>
+          )}
           <div className="row wrap">
-            <button type="button" className="btn" disabled={busy} onClick={() => run(async () => setPreview(await call('/admin/import/preview', { method: 'POST' })))}>Preview import</button>
-            {preview && <button type="button" className="btn primary" disabled={busy} onClick={() => run(async () => { const r = await call('/admin/import/commit', { method: 'POST' }); setPreview(null); return r; }, 'Import complete')}>Import now</button>}
+            <button type="button" className="btn" disabled={busy} onClick={() => run(async () => { setLastResult(null); setPreview(await call('/admin/import/preview', { method: 'POST' })); })}>Check sheet for changes</button>
+            {preview && (preview.create.length + preview.update.length > 0) && (
+              <button
+                type="button"
+                className="btn primary"
+                disabled={busy}
+                onClick={() => run(async () => {
+                  const r = await call('/admin/import/commit', { method: 'POST' });
+                  setPreview(null);
+                  setLastResult(r);
+                  loadStatus();
+                }, 'Import complete')}
+              >
+                Import {preview.create.length + preview.update.length} change{preview.create.length + preview.update.length === 1 ? '' : 's'}
+              </button>
+            )}
           </div>
           {preview && (
             <div className="small stack" style={{ gap: 6 }}>
-              <span>{preview.total} rows: <b>{preview.create.length} new</b>, <b>{preview.update.length} updated</b>, {preview.unchanged} unchanged, {preview.skipped.length} skipped</span>
+              {preview.create.length + preview.update.length === 0 ? (
+                <span style={{ color: 'var(--go)', fontWeight: 600 }}>✓ Up to date: all {preview.total}/{preview.total} sheet rows are already in the database.</span>
+              ) : (
+                <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{preview.create.length + preview.update.length} change{preview.create.length + preview.update.length === 1 ? '' : 's'} waiting: {preview.create.length} new, {preview.update.length} updated ({preview.unchanged}/{preview.total} rows unchanged)</span>
+              )}
+              {preview.create.slice(0, 8).map((c) => <span key={c.sheetKey} className="muted">＋ {c.name} ({c.position})</span>)}
               {preview.update.slice(0, 8).map((u) => <span key={u.sheetKey} className="muted">✎ {u.name}: {u.changes.join(', ')}</span>)}
               {preview.skipped.filter((s) => !/Section heading/.test(s.reason)).slice(0, 10).map((s) => <span key={s.row} style={{ color: '#fcd34d' }}>Row {s.row} {s.name}: {s.reason}</span>)}
             </div>
           )}
+          {lastResult && (
+            <span className="small" style={{ color: 'var(--go)', fontWeight: 600 }}>
+              ✓ Imported {lastResult.total}/{lastResult.total} rows: {lastResult.created} new, {lastResult.updated} updated, {lastResult.unchanged} unchanged{lastResult.skippedOnBlock ? ' (1 player on the block was skipped)' : ''}.
+            </span>
+          )}
+
           <h2 style={{ marginTop: 6 }}>Photos from Drive</h2>
+          {status && (
+            <div className="small stack" style={{ gap: 4 }}>
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <span className="label">Players with photos</span>
+                <b>{status.photos.withPhoto}/{status.photos.total}</b>
+              </div>
+              <div className="progress"><i style={{ width: `${status.photos.total ? (status.photos.withPhoto / status.photos.total) * 100 : 0}%` }} /></div>
+              <span className={status.photos.failed ? '' : 'muted'} style={status.photos.failed ? { color: '#fca5a5' } : undefined}>
+                {status.photos.failed} failed · {status.photos.waiting} waiting · {status.photos.noLink} without a photo link
+                {status.photos.withPhoto === status.photos.withLink && status.photos.withLink > 0 ? ' · ✓ all synced' : ''}
+              </span>
+              {status.photos.lastSync && <span className="muted">Last sync {new Date(status.photos.lastSync.at).toLocaleString()} · {status.photos.lastSync.ok} saved · {status.photos.lastSync.failed} failed</span>}
+            </div>
+          )}
           <div className="row wrap">
             <button type="button" className="btn" disabled={busy || job?.running} onClick={() => run(() => call('/admin/import/photos', { method: 'POST', body: {} }), 'Photo sync started')}>Sync new photos</button>
-            <button type="button" className="btn ghost" disabled={busy || job?.running} onClick={() => run(() => call('/admin/import/photos', { method: 'POST', body: { force: true } }), 'Re-downloading all photos')}>Re-download all</button>
+            <button type="button" className="btn" disabled={busy || job?.running} onClick={() => run(() => call('/admin/import/photos', { method: 'POST', body: { onlyFailed: true } }), 'Retrying failed photos')}>↻ Retry failed</button>
+            <button type="button" className="btn ghost" disabled={busy || job?.running} onClick={() => window.confirm('Re-download and re-process every photo?') && run(() => call('/admin/import/photos', { method: 'POST', body: { force: true } }), 'Re-downloading all photos')}>Re-download all</button>
           </div>
+          <p className="muted small" style={{ margin: 0 }}>iPhone (HEIC) photos are converted automatically. "Sync new photos" also resumes an interrupted sync.</p>
           {job && (
             <div className="stack small" style={{ gap: 6 }}>
               <div className="progress"><i style={{ width: `${job.total ? (job.done / job.total) * 100 : 100}%` }} /></div>
               <span>{job.running ? 'Working…' : 'Finished'} {job.done}/{job.total} · {job.ok} ok · {job.failed.length} failed{job.skipped ? ` · ${job.skipped} already done` : ''}</span>
-              {job.failed.slice(0, 12).map((f) => <span key={f.playerId} style={{ color: '#fca5a5' }}>{f.name}: {f.reason}</span>)}
+              {job.failed.slice(0, 20).map((f) => (
+                <span key={f.playerId} className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
+                  <span className="grow" style={{ color: '#fca5a5' }}>{f.name}: {f.reason}</span>
+                  {!job.running && (
+                    <button
+                      type="button"
+                      className="btn sm"
+                      disabled={busy}
+                      onClick={() => run(async () => {
+                        const r = await call(`/admin/players/${f.playerId}/photo/retry`, { method: 'POST' });
+                        if (!r.ok) throw new Error(r.reason);
+                        setJobs((js) => ({ ...js, photos: { ...js.photos, ok: js.photos.ok + 1, failed: js.photos.failed.filter((x) => x.playerId !== f.playerId) } }));
+                        loadStatus();
+                      }, `${f.name}: photo saved`)}
+                    >
+                      Retry
+                    </button>
+                  )}
+                </span>
+              ))}
             </div>
           )}
         </div>
