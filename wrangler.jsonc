@@ -1,0 +1,12 @@
+// Cloudflare Workers static-site config, read by `npx wrangler deploy` (the deploy command
+// in Cloudflare Workers Builds). The "name" must match the Worker/project name in the dashboard.
+{
+  "name": "iem-fedcup-frontend",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    // Vite's build output.
+    "directory": "./dist",
+    // Deep links like /studio or /admin/teams load the app instead of a 404.
+    "not_found_handling": "single-page-application"
+  }
+}
