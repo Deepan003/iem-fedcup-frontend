@@ -50,9 +50,9 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
 
   return (
     <div className="card" style={{ background: 'var(--bg-2)' }}>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>Captain & retained players</h2>
-        <span className="chip">{members.length} · {money(retainedTotal, currency)} off the purse</span>
+      <div className="ret-head">
+        <h2 style={{ margin: 0 }}>Captain & retained</h2>
+        <span className="chip">{members.length} player{members.length === 1 ? '' : 's'} · {money(retainedTotal, currency)} off purse</span>
       </div>
 
       {members.length === 0 && <p className="muted small">None yet. Captains cost nothing; retained players' prices are taken off the team budget.</p>}

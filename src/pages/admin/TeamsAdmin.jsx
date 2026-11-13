@@ -3,11 +3,12 @@ import {
 } from 'react';
 import { money, POSITIONS, POS_SHORT } from '../../lib/format.js';
 import {
-  Field, Spinner, TeamLogo, Toggle, useAction,
+  Field, Spinner, TeamLogo, Toggle, useAction, logoTransform,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import RetainedEditor from './RetainedEditor.jsx';
 import LogoAdjust from './LogoAdjust.jsx';
+import PenaltyEditor from './PenaltyEditor.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 
 const blankTeam = {
@@ -20,13 +21,15 @@ function upload(file) {
   return fd;
 }
 
-function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
+function TeamEditor({
+  team, liveTeam, players, currency, onSaved, autoAdjust = false, onUploaded, onAdjustDone,
+}) {
   const { call } = useAdmin();
   const ask = useConfirm();
   const [run, busy] = useAction();
   const [form, setForm] = useState({ ...team, budget: team.budget ?? '' });
   const [password, setPassword] = useState(null);
-  const [adjusting, setAdjusting] = useState(false);
+  const [adjusting, setAdjusting] = useState(autoAdjust);
   const [ret, setRet] = useState({
     playerId: '', name: '', position: 'Forward', price: '',
   });
@@ -50,7 +53,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
       {adjusting && (
         <LogoAdjust
           team={team}
-          onClose={() => setAdjusting(false)}
+          onClose={() => { setAdjusting(false); onAdjustDone?.(); }}
           onSave={(fit) => run(async () => { await call(`/admin/teams/${team.id}`, { method: 'PUT', body: { logoFit: fit } }); onSaved(); }, 'Logo framing saved')}
         />
       )}
@@ -77,7 +80,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
         <button type="button" className="btn primary" disabled={busy} onClick={save}>Save</button>
         <label className="btn">
           Upload logo
-          <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && run(async () => { await call(`/admin/teams/${team.id}/logo`, { method: 'POST', form: upload(e.target.files[0]) }); onSaved(); }, 'Logo updated')} />
+          <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && run(async () => { await call(`/admin/teams/${team.id}/logo`, { method: 'POST', form: upload(e.target.files[0]) }); onUploaded?.(team.id); setAdjusting(true); onSaved(); }, 'Logo uploaded · adjust the framing')} />
         </label>
         {team.logoUrl && <button type="button" className="btn" onClick={() => setAdjusting(true)}>Adjust logo</button>}
         <label className="btn">
@@ -107,6 +110,7 @@ function TeamEditor({ team, liveTeam, players, currency, onSaved }) {
       </div>
 
       <RetainedEditor team={team} liveTeam={liveTeam} players={players} currency={currency} onSaved={onSaved} />
+      <PenaltyEditor team={team} currency={currency} onSaved={onSaved} />
 
       <button
         type="button"
@@ -125,7 +129,11 @@ export default function TeamsAdmin() {
   const [teams, setTeams] = useState(null);
   const [players, setPlayers] = useState([]);
   const [form, setForm] = useState(blankTeam);
-  const [logoFile, setLogoFile] = useState(null);
+  const [logoFile, setLogoFileRaw] = useState(null);
+  const [newFit, setNewFit] = useState(null);
+  const [adjustNew, setAdjustNew] = useState(false);
+  const [autoAdjustId, setAutoAdjustId] = useState(null);
+  const setLogoFile = (file) => { setLogoFileRaw(file); setNewFit(null); setAdjustNew(!!file); };
   const logoPreview = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : null), [logoFile]);
   useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
   const [run, busy] = useAction();
@@ -150,6 +158,7 @@ export default function TeamsAdmin() {
           run(async () => {
             const team = await call('/admin/teams', { method: 'POST', body: { ...form, budget: form.budget === '' ? null : Number(form.budget), order: teams.length } });
             if (logoFile) await call(`/admin/teams/${team.id}/logo`, { method: 'POST', form: upload(logoFile) });
+            if (logoFile && newFit) await call(`/admin/teams/${team.id}`, { method: 'PUT', body: { logoFit: newFit } });
             setForm(blankTeam);
             setLogoFile(null);
             load();
@@ -158,10 +167,25 @@ export default function TeamsAdmin() {
       >
         <h2>Add a team</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: 18, alignItems: 'start' }}>
-          <label className="logo-drop" title="Upload team logo">
-            {logoPreview ? <img src={logoPreview} alt="Logo preview" /> : <span>+ Logo<br /><small>PNG / SVG / JPG</small></span>}
-            <input type="file" accept="image/*" hidden onChange={(e) => setLogoFile(e.target.files[0] || null)} />
-          </label>
+          <div className="stack" style={{ gap: 8 }}>
+            <label className="logo-drop" title="Upload team logo">
+              {logoPreview ? <img src={logoPreview} alt="Logo preview" style={{ transform: logoTransform(newFit) }} /> : <span>+ Logo<br /><small>PNG / SVG / JPG</small></span>}
+              <input type="file" accept="image/*" hidden onChange={(e) => { setLogoFile(e.target.files[0] || null); e.target.value = ''; }} />
+            </label>
+            {logoPreview && (
+              <div className="row" style={{ gap: 6 }}>
+                <button type="button" className="btn sm" onClick={() => setAdjustNew(true)}>⤢ Adjust</button>
+                <button type="button" className="btn sm ghost" onClick={() => setLogoFile(null)} aria-label="Remove logo">✕</button>
+              </div>
+            )}
+          </div>
+          {adjustNew && logoPreview && (
+            <LogoAdjust
+              team={{ name: form.name || 'New team', color: form.color, logoUrl: logoPreview, logoFit: newFit }}
+              onClose={() => setAdjustNew(false)}
+              onSave={(fit) => setNewFit(fit.scale === 1 && !fit.x && !fit.y ? null : fit)}
+            />
+          )}
           <div className="form-grid">
             <Field label="Team name"><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
             <Field label="Short name"><input className="input" value={form.shortName} maxLength={5} onChange={(e) => setForm({ ...form, shortName: e.target.value })} /></Field>
@@ -171,9 +195,9 @@ export default function TeamsAdmin() {
         </div>
         <button className="btn primary" style={{ marginTop: 14 }} disabled={busy || !form.name}>Add team</button>
       </form>
-      <div className="cols">
+      <div className="team-cols">
         {teams.map((t) => (
-          <TeamEditor key={`${t.id}-${t.logoUrl}-${t.hasPassword}`} team={t} liveTeam={live[t.id]} players={players} currency={auction.state?.currency} onSaved={load} />
+          <TeamEditor key={`${t.id}-${t.logoUrl}-${t.hasPassword}`} team={t} liveTeam={live[t.id]} players={players} currency={auction.state?.currency} onSaved={load} autoAdjust={autoAdjustId === t.id} onUploaded={setAutoAdjustId} onAdjustDone={() => setAutoAdjustId(null)} />
         ))}
       </div>
     </>

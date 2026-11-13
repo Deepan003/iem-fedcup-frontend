@@ -232,6 +232,7 @@ function CaptainRoom({ auth, onLogout }) {
         <div style={{ textAlign: 'right' }}>
           <div className="money"><RollingNumber value={me?.purse ?? 0} /></div>
           <span className="tiny">{state.currency} left</span>
+          {me?.penalty > 0 && <span className="pen-tag" style={{ display: 'block' }} title={(me.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>incl. −{money(me.penalty, state.currency)} penalty</span>}
         </div>
       </div>
       <div className="row" style={{ justifyContent: 'space-between', marginTop: -14 }}>

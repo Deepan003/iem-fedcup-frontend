@@ -48,7 +48,8 @@ export default function Report() {
             {t.logoUrl && <TeamLogo team={t} size={72} />}
             <div>
               <h2>{t.name}</h2>
-              <p>Captain: {t.captainName || '—'} · {t.count} players · spent {money(t.spent, cur)} · left {money(t.purse, cur)}</p>
+              <p>Captain: {t.captainName || '—'} · {t.count} players · spent {money(t.spent, cur)}{t.penalty > 0 ? ` · penalties ${money(t.penalty, cur)}` : ''} · left {money(t.purse, cur)}</p>
+              {(t.penalties || []).map((p) => <p key={p.id} className="rp-pen">Penalty −{money(p.amount, cur)}: {p.remark}</p>)}
             </div>
           </header>
           <table className="rp-table">

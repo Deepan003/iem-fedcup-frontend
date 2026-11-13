@@ -23,6 +23,7 @@ export function PurseStrip({ state, highlight }) {
                   <span className="tiny">max {money(t.maxBid, state.currency)}</span>
                 </div>
                 <div className="purse-bar"><i style={{ transform: `scaleX(${pct})` }} /></div>
+                {t.penalty > 0 && <span className="pen-tag" title={(t.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>−{Number(t.penalty).toLocaleString('en-IN')} penalty</span>}
               </>
             ) : <div className="tiny" style={{ marginTop: 12 }}>Budget hidden</div>}
           </div>
