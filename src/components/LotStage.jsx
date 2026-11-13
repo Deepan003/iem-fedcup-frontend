@@ -5,6 +5,7 @@ import {
 } from '../lib/format.js';
 import { PlayerCard, TeamLogo } from './ui.jsx';
 import { RollingNumber } from './fx.jsx';
+import Indicators, { heatClass } from './Indicators.jsx';
 
 /** Draining broadcast timer bar, synced to the server clock. */
 export function Countdown({ lot, now, paused }) {
@@ -156,7 +157,7 @@ export default function LotStage({ state, now, showHistory = true, children }) {
           <div><span className="tiny">Base</span><b>{money(lot.base, state.currency)}</b></div>
         </div>
 
-        <div className="price-block">
+        <div className={`price-block ${heatClass(lot, state.stats?.records)}`}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span className="label">{phase === 'sold' ? 'Sold for' : hasBid ? 'Current bid' : 'Opening at'}</span>
             {phase === 'bidding' && <span className="label">Next {money(lot.nextAmount, state.currency)} · {lot.bidCount} bid{lot.bidCount === 1 ? '' : 's'}</span>}
@@ -167,6 +168,7 @@ export default function LotStage({ state, now, showHistory = true, children }) {
           </div>
         </div>
 
+        <Indicators state={state} now={now} />
         <Countdown lot={lot} now={now} paused={state.paused} />
         <LowerThird team={leader} phase={phase} />
 

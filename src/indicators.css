@@ -1,0 +1,29 @@
+/* Broadcast indicators + bid heat + record sting. transform/opacity only. */
+.ind-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+.ind { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 2px; border: 1px solid var(--rule-2); background: rgba(255, 255, 255, 0.03); font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bone-3); animation: ind-in 0.45s var(--ease) both; }
+.ind::before { content: ''; width: 6px; height: 6px; background: var(--dim); flex: none; }
+.ind.hot { border-color: rgba(255, 74, 46, 0.6); color: #ffb39f; }
+.ind.hot::before { background: var(--signal); animation: blink 1s steps(2) infinite; }
+.ind.gold { border-color: rgba(233, 180, 76, 0.7); color: var(--yellow); }
+.ind.gold::before { background: var(--yellow); }
+@keyframes ind-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* Price heat */
+.price-block { position: relative; transition: box-shadow 0.6s var(--ease); }
+.price-block.heat-1 { box-shadow: 0 -2px 0 0 rgba(255, 159, 58, 0.7) inset; }
+.price-block.heat-2 { box-shadow: 0 -3px 0 0 var(--signal) inset; }
+.price-block.heat-2 .price .roll-strip > span { background: linear-gradient(180deg, #fff 0%, #ffd7c2 50%, #ff7a52 100%); -webkit-background-clip: text; background-clip: text; }
+.price-block.heat-2::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: radial-gradient(60% 100% at 30% 100%, rgba(255, 74, 46, 0.18), transparent 70%); pointer-events: none; animation: heat-pulse 1.6s ease-in-out infinite; }
+.price-block.heat-record .price .roll-strip > span { background: var(--grad-gold); -webkit-background-clip: text; background-clip: text; }
+.price-block.heat-record { box-shadow: 0 -3px 0 0 var(--yellow) inset; }
+@keyframes heat-pulse { 50% { opacity: 0.4; } }
+
+/* Record sting */
+.rec-sting { position: fixed; left: 0; right: 0; top: 38%; z-index: 90; pointer-events: none; display: grid; place-items: center; }
+.rec-bar { position: absolute; left: 0; right: 0; height: 110px; background: var(--grad-gold); transform: scaleX(0); transform-origin: left; animation: rec-bar 2.6s var(--ease-io) forwards; }
+.rec-text { position: relative; display: flex; align-items: baseline; gap: 18px; color: var(--ink); opacity: 0; animation: rec-text 2.6s var(--ease) forwards; }
+.rec-text b { font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(34px, 6vw, 72px); line-height: 1; }
+.rec-text span { font-family: var(--mono); font-weight: 600; font-size: clamp(16px, 2.4vw, 26px); }
+@keyframes rec-bar { 0% { transform: scaleX(0); } 22%, 78% { transform: scaleX(1); transform-origin: left; } 79% { transform-origin: right; } 100% { transform: scaleX(0); transform-origin: right; } }
+@keyframes rec-text { 0%, 18% { opacity: 0; transform: translateX(-30px); } 30%, 72% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(30px); } }
+@media (prefers-reduced-motion: reduce) { .price-block.heat-2::after { animation: none; } }
