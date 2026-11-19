@@ -13,6 +13,7 @@ import {
 } from '../components/ui.jsx';
 import { RollingNumber } from '../components/fx.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
+import { ShortcutHelp, useShortcuts } from '../lib/shortcuts.jsx';
 
 /* --------------------------------- login --------------------------------- */
 function CaptainLogin({ onLogin }) {
@@ -313,6 +314,7 @@ function CaptainRoom({ auth, onLogout }) {
   }, [notice]);
   useEffect(() => { setNotice(null); }, [state?.lot?.seq]);
 
+  const keys = useShortcuts(); // B = bid, ? = list
   if (!state) return <div className="auth-wrap"><Spinner /></div>;
 
   const me = teamById(state, auth.team.id);
@@ -372,8 +374,101 @@ function CaptainRoom({ auth, onLogout }) {
   const budget = me?.budget || purse;
   const tight = after != null && budget > 0 && after < budget * 0.2;
 
+  // Wide screens: use the space either side. Left = your team, right = the competition.
+  const budgetTotal = me?.budgetTotal ?? ((me?.purse ?? 0) + (me?.spent ?? 0) + (me?.penalty ?? 0));
+  const mySquad = [...(me?.squad || [])].sort((a, b) => (b.isCaptain - a.isCaptain) || ((b.price || 0) - (a.price || 0)));
+  const posCount = (pos) => mySquad.filter((p) => p.position === pos).length;
+  const slotsTotal = me?.slotsLeft != null ? (me.count ?? mySquad.length) + me.slotsLeft : null;
+  const table = [...state.teams].sort((a, b) => (b.purse ?? 0) - (a.purse ?? 0));
+  const leftRail = (
+    <aside className="cap-side cap-left" aria-label="Your team">
+      <div className="cs-block">
+        <span className="label">Your purse</span>
+        <div className="cs-big"><RollingNumber value={me?.purse ?? 0} money /> <small>{state.currency}</small></div>
+        {budgetTotal > 0 && <div className="cs-bar"><i style={{ transform: `scaleX(${Math.max(0, Math.min(1, (me?.purse ?? 0) / budgetTotal))})` }} /></div>}
+        {after != null && (
+          <div className={`cs-after ${leading ? 'lead' : ''} ${tight ? 'tight' : ''}`}>
+            <span className="tiny">{leading ? 'If you win' : `After bidding ${money(afterAmount, state.currency)}`}</span>
+            <b><RollingNumber value={after} money /> <small>{state.currency}</small></b>
+          </div>
+        )}
+        <div className="cs-kv"><span>Budget</span><b>{money(budgetTotal, state.currency)}</b></div>
+        {me?.spent != null && <div className="cs-kv"><span>Spent</span><b>{money(me.spent, state.currency)}</b></div>}
+        <div className="cs-kv"><span>Max bid now</span><b>{money(state.me?.maxBidForLot ?? me?.maxBid, state.currency)}</b></div>
+        {me?.penalty > 0 && <div className="cs-kv"><span>Penalties</span><b className="pen-tag">−{money(me.penalty, state.currency)}</b></div>}
+      </div>
+      <div className="cs-block">
+        <span className="label">Squad</span>
+        <div className="cs-big">{me?.count ?? mySquad.length}{slotsTotal != null && <small>/{slotsTotal}</small>}</div>
+        {me?.slotsLeft != null && <span className="tiny">{me.slotsLeft} slot{me.slotsLeft === 1 ? '' : 's'} left</span>}
+        <div className="cs-pos">
+          {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((p) => (
+            <span key={p} className={posCount(p) ? '' : 'zero'}><b>{posCount(p)}</b>{POS_SHORT[p]}</span>
+          ))}
+        </div>
+      </div>
+      {mySquad.length > 0 && (
+        <div className="cs-block cs-list">
+          <span className="label">Your players</span>
+          {mySquad.map((p) => (
+            <div key={p.id} className="cs-row">
+              <Avatar player={p} size={26} />
+              <span className="ellipsis">{p.name}{p.isCaptain ? ' (C)' : ''}</span>
+              <span className="tiny">{POS_SHORT[p.position]}</span>
+              <b className="mono small">{p.isCaptain ? 'C' : money(p.price, state.currency)}</b>
+            </div>
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+  const rightRail = (
+    <aside className="cap-side cap-right" aria-label="Other teams">
+      {rivals.length > 0 && (
+        <div className="cs-block">
+          <span className="label">Can outbid you</span>
+          {rivals.map((t) => (
+            <div key={t.id} className={`rival ${t.id === lot.leaderId ? 'lead' : ''}`} style={{ '--tc': t.color }}>
+              <TeamLogo team={t} size={30} />
+              <b className="ellipsis">{t.shortName || t.name}</b>
+              {t.id === lot.leaderId && <span className="rival-tag">Leading</span>}
+              <span className="mono small">max {money(t.maxBid, state.currency)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {table.some((t) => t.purse != null) && (
+        <div className="cs-block">
+          <span className="label">All teams · purse / max bid</span>
+          {table.map((t) => (
+            <div key={t.id} className={`cs-team ${t.id === auth.team.id ? 'me' : ''} ${lot?.leaderId === t.id ? 'lead' : ''}`} style={{ '--tc': t.color }}>
+              <TeamLogo team={t} size={22} />
+              <b className="ellipsis">{t.shortName || t.name}</b>
+              <span className="mono small">{money(t.purse, state.currency)}</span>
+              <span className="mono small muted">{money(t.maxBid, state.currency)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {cv.showUpcoming && state.upcoming.length > 0 && (
+        <div className="cs-block">
+          <span className="label">Up next</span>
+          {state.upcoming.slice(0, 6).map((p) => (
+            <button type="button" key={p.id} className="cs-row cs-next" onClick={() => toggleWatch(p.id)} title="Add to / remove from your watchlist">
+              <Avatar player={p} size={26} />
+              <span className="ellipsis">{p.name}</span>
+              <span className="tiny">{POS_SHORT[p.position]}</span>
+              <b className="small">{watched(p.id) ? '★' : '☆'}</b>
+            </button>
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+
   return (
-    <main className="container studio" style={{ paddingBottom: 0, paddingTop: 80 }}>
+    <main className="container studio cap-wide" style={{ paddingBottom: 0, paddingTop: 80 }}>
+      <ShortcutHelp open={keys.help} onClose={() => keys.setHelp(false)} />
       <div className="studio-bg" />
       <div className="cap-head" style={{ borderBottom: `2px solid ${me?.color || 'var(--rule)'}` }}>
         <TeamLogo team={me} size={48} />
@@ -397,10 +492,14 @@ function CaptainRoom({ auth, onLogout }) {
         {connected ? <span className="tiny" style={{ color: 'var(--go)' }}>● Connected</span> : <span className="tiny" style={{ color: 'var(--amber)' }}>● Reconnecting</span>}
         <span className="row" style={{ gap: 8 }}>
           <SoundDock state={state} sound={snd} surface="captain" inline />
+          <button type="button" className="btn sm ghost kbd-hint-btn hide-touch" onClick={() => keys.setHelp(true)} title="Keyboard shortcuts">⌨ <kbd>B</kbd> bids</button>
           <button type="button" className="btn sm ghost" onClick={onLogout}>Sign out</button>
         </span>
       </div>
 
+      <div className="cap-grid">
+      {leftRail}
+      <div className="cap-center">
       {lot && watched(lot.playerId) && ['reveal', 'bidding'].includes(lot.phase) && (
         <div className="watch-banner">★ A player on your watchlist is on the block</div>
       )}
@@ -420,7 +519,7 @@ function CaptainRoom({ auth, onLogout }) {
             <span className="v"><RollingNumber value={lot.amount} money /> <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{state.currency}</span></span>
           </div>
         ) : (
-          <button type="button" className={`bid-btn ${bumped ? 'bumped' : ''}`} disabled={!!reason || pending} onClick={placeBid}>
+          <button type="button" data-kbd="b" data-kbd-label="B" data-kbd-name="Bid" className={`bid-btn ${bumped ? 'bumped' : ''}`} disabled={!!reason || pending || bumped} onClick={placeBid}>
             {pending ? 'Sending…' : reason || (
               <>
                 <span className="k">{bumped ? 'New price' : 'Bid'}</span>
@@ -432,7 +531,7 @@ function CaptainRoom({ auth, onLogout }) {
       </div>
 
       {rivals.length > 0 && (
-        <div className="rivals" aria-label="Teams that can outbid you">
+        <div className="rivals narrow-only" aria-label="Teams that can outbid you">
           <span className="label">Can outbid you</span>
           {rivals.map((t) => (
             <div key={t.id} className={`rival ${t.id === lot.leaderId ? 'lead' : ''}`} style={{ '--tc': t.color }}>
@@ -473,6 +572,9 @@ function CaptainRoom({ auth, onLogout }) {
           <p className="muted small" style={{ gridColumn: '1 / -1' }}>Tap a player to add them to your watchlist (★). You will get a heads-up when they come up.</p>
         </div>
       )}
+      </div>
+      {rightRail}
+      </div>
       <div style={{ height: 30 }} />
       <SoldOverlay state={state} />
     </main>
