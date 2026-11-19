@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { fmtAmount } from '../lib/format.js';
 
 const DIGITS = '0123456789'.split('');
 const finePointer = () => typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
 const reduced = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Broadcast-style odometer: each digit rolls to its new value. */
-export function RollingNumber({ value, className = '' }) {
-  const str = Number(value ?? 0).toLocaleString('en-IN');
+export function RollingNumber({ value, className = '', money = false }) {
+  const str = money ? fmtAmount(value ?? 0) : Number(value ?? 0).toLocaleString('en-IN');
   const chars = str.split('');
   return (
     <span className={`roll ${className}`} aria-label={str} role="text">

@@ -170,7 +170,7 @@ export default function LotStage({ state, now, showHistory = true, children }) {
             {phase === 'bidding' && <span className="label">Next {money(lot.nextAmount, state.currency)} · {lot.bidCount} bid{lot.bidCount === 1 ? '' : 's'}</span>}
           </div>
           <div key={hit} className={`price ${hit ? 'hit' : ''}`}>
-            <RollingNumber value={hasBid ? lot.amount : lot.base} />
+            <RollingNumber value={hasBid ? lot.amount : lot.base} money />
             <span className="cur">{state.currency}</span>
           </div>
         </div>

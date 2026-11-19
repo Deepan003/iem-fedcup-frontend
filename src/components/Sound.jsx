@@ -4,13 +4,13 @@ import {
 import {
   listVoices, loadPrefs, pickVoice, savePrefs, sound,
 } from '../lib/sound.js';
-import { teamById } from '../lib/format.js';
+import { fmtAmount, teamById } from '../lib/format.js';
 import '../sound.css';
 
 const CURRENCY_WORD = {
   pts: 'points', pt: 'points', points: 'points', '₹': 'rupees', rs: 'rupees', inr: 'rupees', l: 'lakh', cr: 'crore', k: 'thousand',
 };
-const say$ = (n, cur) => `${Number(n || 0).toLocaleString('en-IN')} ${CURRENCY_WORD[String(cur || '').toLowerCase()] ?? (cur || '')}`.trim();
+const say$ = (n, cur) => `${fmtAmount(n || 0)} ${CURRENCY_WORD[String(cur || '').toLowerCase()] ?? (cur || '')}`.trim();
 
 const subscribe = (fn) => sound.onChange(fn);
 const isUnlocked = () => sound.unlocked;

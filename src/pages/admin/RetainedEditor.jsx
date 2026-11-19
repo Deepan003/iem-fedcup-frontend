@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { assetUrl } from '../../lib/api.js';
 import { money, POSITIONS, POS_SHORT, initials } from '../../lib/format.js';
-import { Field, useAction } from '../../components/ui.jsx';
+import { Field, MoneyInput, useAction } from '../../components/ui.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import PhotoAdjust, { storedPhoto } from '../../components/PhotoAdjust.jsx';
@@ -71,7 +71,7 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
               <Field label="Department"><input className="input" value={editing.department} onChange={(e) => setEditing({ ...editing, department: e.target.value })} /></Field>
               <Field label="Year"><input className="input" value={editing.year} onChange={(e) => setEditing({ ...editing, year: e.target.value })} /></Field>
               <Field label="Position"><select className="input" value={editing.position} onChange={(e) => setEditing({ ...editing, position: e.target.value })}>{POSITIONS.map((x) => <option key={x}>{x}</option>)}</select></Field>
-              {!editing.isCaptain && <Field label={`Price (${currency})`}><input className="input" inputMode="numeric" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value.replace(/\D/g, '') })} /></Field>}
+              {!editing.isCaptain && <Field label={`Price (${currency})`}><MoneyInput value={editing.price} onChange={(v) => setEditing({ ...editing, price: v })} /></Field>}
             </div>
             <label className="toggle" style={{ borderBottom: 0 }}><span>Captain (free)</span><input type="checkbox" checked={editing.isCaptain} onChange={(e) => setEditing({ ...editing, isCaptain: e.target.checked })} /></label>
             <div className="row"><button type="button" className="btn sm primary" disabled={busy} onClick={save}>Save</button><button type="button" className="btn sm ghost" onClick={() => setEditing(null)}>Cancel</button></div>
@@ -90,7 +90,7 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
               <span className="tiny">{POS_SHORT[p.position]}{p.department ? ` · ${p.department}` : ''}{p.year ? ` · ${p.year}` : ''}</span>
             </div>
             <b className="mono small">{p.isCaptain ? 'Free' : money(p.price, currency)}</b>
-            <button type="button" className="btn sm ghost" onClick={() => setEditing({ id: p.id, name: p.name, department: p.department || '', year: p.year || '', position: p.position, price: String(p.price ?? 0), isCaptain: !!p.isCaptain })}>Edit</button>
+            <button type="button" className="btn sm ghost" onClick={() => setEditing({ id: p.id, name: p.name, department: p.department || '', year: p.year || '', position: p.position, price: p.price ?? 0, isCaptain: !!p.isCaptain })}>Edit</button>
             <button type="button" className="btn sm ghost" onClick={async () => (await ask({ title: `Remove ${p.name}?`, message: `${p.name} goes back into the auction pool${p.isCaptain ? '' : ` and ${team.name} gets ${money(p.price, currency)} back`}.`, tone: 'warning', confirmLabel: 'Remove' })) && run(async () => { await call(`/admin/teams/${team.id}/retained/${p.id}`, { method: 'DELETE' }); onSaved(); })}>✕</button>
           </div>
         )))}
@@ -111,7 +111,7 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
           {!form.playerId && <Field label="Position"><select className="input" value={form.position} onChange={set('position')}>{POSITIONS.map((x) => <option key={x}>{x}</option>)}</select></Field>}
           <Field label="Department"><input className="input" value={form.department} onChange={set('department')} placeholder="e.g. CSE" /></Field>
           {!form.playerId && <Field label="Year"><input className="input" value={form.year} onChange={set('year')} placeholder="e.g. 3rd" /></Field>}
-          {!form.isCaptain && <Field label={`Retention price (${currency})`}><input className="input" inputMode="numeric" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })} /></Field>}
+          {!form.isCaptain && <Field label={`Retention price (${currency})`}><MoneyInput value={form.price} onChange={(v) => setForm({ ...form, price: v })} /></Field>}
           <Field label="Photo (optional)">
             {photo ? (
               <span className="ret-pick">

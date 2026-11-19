@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { money } from '../../lib/format.js';
-import { Field, useAction } from '../../components/ui.jsx';
+import { Field, MoneyInput, useAction } from '../../components/ui.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 import { useAdmin } from './AdminApp.jsx';
 
@@ -66,7 +66,7 @@ export default function PenaltyEditor({ team, currency, onSaved }) {
 
       <div className="pen-add">
         <Field label={`Amount (${currency || 'pts'})`}>
-          <input className="input" inputMode="numeric" value={amount} placeholder="e.g. 50" onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} />
+          <MoneyInput value={amount} placeholder="e.g. 50" onChange={setAmount} />
         </Field>
         <Field label="Remark (reason)">
           <input className="input" value={remark} maxLength={200} placeholder="e.g. Late for the captains' meeting" onChange={(e) => setRemark(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && ready) { e.preventDefault(); add(); } }} />

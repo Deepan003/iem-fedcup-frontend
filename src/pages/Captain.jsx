@@ -237,7 +237,7 @@ function CaptainRoom({ auth, onLogout }) {
           <span className="tiny">{me?.count} player{me?.count === 1 ? '' : 's'} · max bid {money(state.me?.maxBidForLot ?? me?.maxBid, state.currency)}</span>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div className="money"><RollingNumber value={me?.purse ?? 0} /></div>
+          <div className="money"><RollingNumber value={me?.purse ?? 0} money /></div>
           <span className="tiny">{state.currency} left</span>
           {me?.penalty > 0 && <span className="pen-tag" style={{ display: 'block' }} title={(me.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>incl. −{money(me.penalty, state.currency)} penalty</span>}
         </div>
@@ -261,7 +261,7 @@ function CaptainRoom({ auth, onLogout }) {
           {leading ? '✓ You lead' : pending ? 'Sending…' : reason || (
             <>
               <span className="k">Bid</span>
-              <span className="v"><RollingNumber value={lot.nextAmount} /> <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{state.currency}</span></span>
+              <span className="v"><RollingNumber value={lot.nextAmount} money /> <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{state.currency}</span></span>
             </>
           )}
         </button>

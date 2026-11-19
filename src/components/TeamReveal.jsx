@@ -54,7 +54,7 @@ export default function TeamReveal({ state, onClose }) {
             {t.captainName && <span className="rv-cap">Captain · {t.captainName}</span>}
             <div className="rv-total">
               <span className="rv-kicker">Spent</span>
-              <span className="rv-num"><RollingNumber value={total} /> <small>{state.currency}</small></span>
+              <span className="rv-num"><RollingNumber value={total} money /> <small>{state.currency}</small></span>
             </div>
           </div>
           <ol className="rv-squad">

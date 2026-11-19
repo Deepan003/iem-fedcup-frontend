@@ -4,7 +4,7 @@ import {
 import { assetUrl } from '../lib/api.js';
 import { useTilt } from './fx.jsx';
 import {
-  POS_COLOR, POS_SHORT, initials, onColor,
+  POS_COLOR, POS_SHORT, initials, onColor, amountToText, cleanAmountText, moneyDecimals, parseAmount,
 } from '../lib/format.js';
 
 /* --------------------------------- toasts -------------------------------- */
@@ -47,6 +47,41 @@ export function Field({ label, children, hint }) {
       {children}
       {hint && <small className="muted small">{hint}</small>}
     </label>
+  );
+}
+
+/**
+ * Money input: shows real amounts (2.1) and reports stored units (21 with 1 decimal) or ''.
+ * Accepts decimals only when the auction uses decimal places.
+ */
+export function MoneyInput({
+  value, onChange, className = 'input', ...rest
+}) {
+  const d = moneyDecimals();
+  const [text, setText] = useState(() => amountToText(value));
+  const last = useRef(value);
+  const lastD = useRef(d);
+  useEffect(() => {
+    if (value !== last.current || d !== lastD.current) {
+      last.current = value;
+      lastD.current = d;
+      setText(amountToText(value));
+    }
+  }, [value, d]);
+  return (
+    <input
+      className={className}
+      inputMode={d ? 'decimal' : 'numeric'}
+      value={text}
+      onChange={(e) => {
+        const t = cleanAmountText(e.target.value);
+        setText(t);
+        const v = parseAmount(t);
+        last.current = v;
+        onChange(v);
+      }}
+      {...rest}
+    />
   );
 }
 

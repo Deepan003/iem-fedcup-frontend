@@ -1,4 +1,4 @@
-import { money, POS_SHORT } from '../lib/format.js';
+import { fmtAmount, money, POS_SHORT } from '../lib/format.js';
 import { TeamLogo } from './ui.jsx';
 
 /** Standings-style purse table (fields hidden by the admin are simply absent). */
@@ -19,11 +19,11 @@ export function PurseStrip({ state, highlight }) {
             {t.purse !== undefined ? (
               <>
                 <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 12 }}>
-                  <span className="amt">{Number(t.purse).toLocaleString('en-IN')}</span>
+                  <span className="amt">{fmtAmount(t.purse)}</span>
                   <span className="tiny">max {money(t.maxBid, state.currency)}</span>
                 </div>
                 <div className="purse-bar"><i style={{ transform: `scaleX(${pct})` }} /></div>
-                {t.penalty > 0 && <span className="pen-tag" title={(t.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>−{Number(t.penalty).toLocaleString('en-IN')} penalty</span>}
+                {t.penalty > 0 && <span className="pen-tag" title={(t.penalties || []).map((p) => `−${fmtAmount(p.amount)}: ${p.remark}`).join(' · ')}>−{fmtAmount(t.penalty)} penalty</span>}
               </>
             ) : <div className="tiny" style={{ marginTop: 12 }}>Budget hidden</div>}
           </div>
@@ -42,7 +42,7 @@ export function SquadCard({ team, currency }) {
           <b className="ellipsis" style={{ display: 'block', fontFamily: 'var(--display)', fontWeight: 900, fontSize: 22, textTransform: 'uppercase', lineHeight: 1 }}>{team.name}</b>
           {team.captainName && <span className="tiny">C · {team.captainName}</span>}
         </div>
-        {team.purse !== undefined && <span className="amt" style={{ fontSize: 26 }}>{Number(team.purse).toLocaleString('en-IN')}</span>}
+        {team.purse !== undefined && <span className="amt" style={{ fontSize: 26 }}>{fmtAmount(team.purse)}</span>}
       </div>
       {team.squad && (
         <div className="sq-tally" aria-label="Squad by position">

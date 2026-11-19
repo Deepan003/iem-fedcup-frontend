@@ -2,7 +2,9 @@ import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { assetUrl } from '../../lib/api.js';
-import { money, POSITIONS, POS_SHORT } from '../../lib/format.js';
+import {
+  amountToText, fmtAmount, money, parseAmount, POSITIONS, POS_SHORT,
+} from '../../lib/format.js';
 import {
   Field, Spinner, useAction,
 } from '../../components/ui.jsx';
@@ -23,7 +25,7 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
     await call(`/admin/players/${p.id}`, {
       method: 'PUT',
       body: {
-        name: edit.name, position: edit.position, tier: edit.tier, year: edit.year, basePrice: edit.basePrice === '' ? null : Number(edit.basePrice),
+        name: edit.name, position: edit.position, tier: edit.tier, year: edit.year, basePrice: edit.basePrice === '' ? null : parseAmount(edit.basePrice),
       },
     });
     setEdit(null);
@@ -62,7 +64,7 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
             </select>
           </td>
           <td><input className="input" value={edit.year} onChange={(e) => setEdit({ ...edit, year: e.target.value })} style={{ width: 90 }} /></td>
-          <td><input className="input" placeholder="tier" value={edit.basePrice} onChange={(e) => setEdit({ ...edit, basePrice: e.target.value.replace(/\D/g, '') })} style={{ width: 80 }} /></td>
+          <td><input className="input" placeholder="tier" value={edit.basePrice} inputMode="decimal" onChange={(e) => setEdit({ ...edit, basePrice: e.target.value.replace(/[^\d.]/g, '') })} style={{ width: 80 }} /></td>
         </>
       ) : (
         <>
@@ -73,7 +75,7 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
           <td title={p.basePrice != null ? 'Own base price (overrides the tier)' : p.tierMatched ? 'From the tier' : 'No tier: default base price'}>
             {locked ? <span className="muted">—</span> : (
               <>
-                <b className="mono">{p.effectiveBase ?? p.basePrice ?? '—'}</b>{' '}
+                <b className="mono">{fmtAmount(p.effectiveBase ?? p.basePrice)}</b>{' '}
                 <span className="tiny">{p.basePrice != null ? 'own' : p.tierMatched ? 'tier' : 'default'}</span>
               </>
             )}
@@ -96,7 +98,7 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
               type="button"
               className="btn sm"
               onClick={() => setEdit({
-                name: p.name, position: p.position, tier: p.tier || '', year: p.year || '', basePrice: p.basePrice ?? '',
+                name: p.name, position: p.position, tier: p.tier || '', year: p.year || '', basePrice: amountToText(p.basePrice),
               })}
             >
               Edit

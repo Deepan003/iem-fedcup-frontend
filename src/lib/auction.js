@@ -3,6 +3,7 @@ import {
 } from 'react';
 import { io } from 'socket.io-client';
 import { API_URL } from './api.js';
+import { setMoneyDecimals } from './format.js';
 
 /**
  * Live auction connection.
@@ -30,6 +31,7 @@ export function useAuction({ token = null, onSessionEnded, onEvent } = {}) {
     socketRef.current = s;
 
     const apply = (next) => {
+      if (next && next.decimals !== undefined) setMoneyDecimals(next.decimals);
       stateRef.current = next;
       setState(next);
     };

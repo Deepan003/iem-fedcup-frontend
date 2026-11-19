@@ -4,7 +4,7 @@ import { money, teamById, POS_SHORT } from '../../lib/format.js';
 import LotStage from '../../components/LotStage.jsx';
 import { PurseStrip } from '../../components/Teams.jsx';
 import {
-  Field, Spinner, TeamLogo, useToast,
+  Field, Spinner, TeamLogo, useToast, MoneyInput,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
@@ -57,7 +57,7 @@ export default function Control() {
   const lot = state?.lot;
   useEffect(() => {
     // Pre-fill the amount box with the next valid bid.
-    if (lot?.phase === 'bidding' || lot?.phase === 'reveal') setAmount(String(lot.nextAmount ?? ''));
+    if (lot?.phase === 'bidding' || lot?.phase === 'reveal') setAmount(lot.nextAmount ?? '');
   }, [lot?.seq, lot?.nextAmount, lot?.phase]);
 
   if (!state) return <Spinner />;
@@ -165,7 +165,7 @@ export default function Control() {
                       {state.teams.map((t) => <option key={t.id} value={t.id}>{t.name} (max {money(t.maxBid, state.currency)})</option>)}
                     </select>
                   </Field>
-                  <Field label="Amount"><input className="input" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} /></Field>
+                  <Field label="Amount"><MoneyInput value={amount} onChange={setAmount} /></Field>
                 </div>
                 <div className="row wrap" style={{ marginTop: 10 }}>
                   {phase === 'bidding' && (
@@ -177,7 +177,7 @@ export default function Control() {
                     disabled={busy || !teamId || !amount}
                     onClick={() => {
                       const t = teamById(state, teamId);
-                      act('manualSale', { teamId, amount: Number(amount) }, { confirm: { title: 'Confirm sale', message: `${lot.player?.name} → ${t?.name} for ${amount} ${state.currency}.`, confirmLabel: 'Confirm sold' }, ok: 'Sold!' });
+                      act('manualSale', { teamId, amount: Number(amount) }, { confirm: { title: 'Confirm sale', message: `${lot.player?.name} → ${t?.name} for ${money(amount, state.currency)}.`, confirmLabel: 'Confirm sold' }, ok: 'Sold!' });
                     }}
                   >
                     ✓ Confirm sold to this team

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, API_URL, assetUrl } from '../lib/api.js';
 import { useAuction } from '../lib/auction.js';
-import { money, POSITIONS, initials } from '../lib/format.js';
+import { money, POSITIONS, initials, setMoneyDecimals,
+} from '../lib/format.js';
 import { Spinner, TeamLogo } from '../components/ui.jsx';
 
 const STATUS = {
@@ -38,7 +39,7 @@ export default function Portal() {
   const [pos, setPos] = useState('All');
 
   useEffect(() => {
-    api('/config').then(setConfig).catch(() => setError('Could not reach the server.'));
+    api('/config').then((c) => { setMoneyDecimals(c.decimals); setConfig(c); }).catch(() => setError('Could not reach the server.'));
     api('/teams').then(setTeams).catch(() => {});
   }, []);
 

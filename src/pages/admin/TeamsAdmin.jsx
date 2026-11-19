@@ -3,7 +3,7 @@ import {
 } from 'react';
 import { money, POSITIONS, POS_SHORT } from '../../lib/format.js';
 import {
-  Field, Spinner, TeamLogo, Toggle, useAction, logoTransform,
+  Field, MoneyInput, Spinner, TeamLogo, Toggle, useAction, logoTransform,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import RetainedEditor from './RetainedEditor.jsx';
@@ -73,7 +73,7 @@ function TeamEditor({
         <Field label="Short name"><input className="input" value={form.shortName} onChange={set('shortName')} maxLength={5} /></Field>
         <Field label="Colour"><input className="input" type="color" value={form.color} onChange={set('color')} style={{ padding: 4 }} /></Field>
         <Field label="Captain"><input className="input" value={form.captainName} onChange={set('captainName')} /></Field>
-        <Field label="Budget (empty = default)"><input className="input" inputMode="numeric" value={form.budget} onChange={(e) => set('budget')(e.target.value.replace(/\D/g, ''))} /></Field>
+        <Field label="Budget (empty = default)"><MoneyInput value={form.budget} onChange={set('budget')} /></Field>
       </div>
       <Toggle label="Freeze team" hint="A frozen team cannot bid (e.g. during a dispute)." checked={form.frozen} onChange={set('frozen')} />
       <div className="row wrap">

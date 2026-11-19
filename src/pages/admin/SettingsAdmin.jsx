@@ -1,12 +1,52 @@
 import { useEffect, useState } from 'react';
-import { POSITIONS } from '../../lib/format.js';
 import {
-  Field, Spinner, Toggle, useAction,
+  fmtAmount, POSITIONS, setMoneyDecimals,
+} from '../../lib/format.js';
+import {
+  Field, MoneyInput, Spinner, Toggle, useAction,
 } from '../../components/ui.jsx';
+import { useConfirm } from '../../components/Dialog.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import AudioSettings from './AudioSettings.jsx';
 
 const num = (v) => (v === '' || v == null ? '' : Number(v));
+
+/** A money field: shows real amounts (2.1), stores whole units. */
+function MoneyField({
+  label, value, onChange, hint,
+}) {
+  return <Field label={label} hint={hint}><MoneyInput value={value ?? ''} onChange={onChange} /></Field>;
+}
+
+/** Decimal places for every amount. Changing it converts saved amounts (before any sale only). */
+function DecimalsControl({ value }) {
+  const { call } = useAdmin();
+  const ask = useConfirm();
+  const [run, busy] = useAction();
+  const change = async (next) => {
+    if (next === value) return;
+    const ok = await ask({
+      title: next ? `Allow ${next} decimal place${next > 1 ? 's' : ''}?` : 'Whole numbers only?',
+      message: `All saved amounts (budgets, tier prices, increments, retained prices, penalties) are converted and keep their value${next < value ? ', rounded to fewer decimals' : ''}. Only possible before any player is sold.`,
+      tone: 'warning',
+      confirmLabel: 'Change',
+    });
+    if (!ok) return;
+    run(async () => {
+      await call('/admin/money/decimals', { method: 'POST', body: { decimals: next } });
+      setMoneyDecimals(next);
+    }, 'Decimal places updated');
+  };
+  return (
+    <Field label="Decimal places" hint="For prices like 2.1 or 2.25">
+      <select className="input" value={value} disabled={busy} onChange={(e) => change(Number(e.target.value))}>
+        <option value={0}>None (whole numbers)</option>
+        <option value={1}>1 (e.g. 2.1)</option>
+        <option value={2}>2 (e.g. 2.25)</option>
+      </select>
+    </Field>
+  );
+}
 
 function NumField({ label, value, onChange, hint }) {
   return (
@@ -30,7 +70,7 @@ function IncrementLevels({ value, base, currency, onChange }) {
   const seq = [];
   let p = Number(base) || 0;
   for (let k = 0; k < 9 && p < 1e9; k += 1) { seq.push(p); p += stepFor(p); }
-  const fmt = (n) => Number(n).toLocaleString('en-IN');
+  const fmt = fmtAmount;
   return (
     <div className="inc-box">
       <h2 style={{ margin: '10px 0 4px' }}>Bid increment levels</h2>
@@ -45,11 +85,11 @@ function IncrementLevels({ value, base, currency, onChange }) {
               <span className="inc-text">{i === 0 ? 'At any price' : <>From <b>{fmt(from)}</b> and above</>}</span>
             ) : (
               <span className="inc-text">{i === 0 ? 'From the base price' : <>From <b>{fmt(from)}</b></>} until it reaches
-                <input className="input" inputMode="numeric" value={l.upTo ?? ''} onChange={(e) => upd(i, { upTo: e.target.value === '' ? '' : Number(e.target.value.replace(/\D/g, '')) })} />
+                <MoneyInput value={l.upTo ?? ''} onChange={(v) => upd(i, { upTo: v })} />
               </span>
             )}
             <span className="inc-text">each bid adds <span className="inc-plus">+</span>
-              <input className="input" inputMode="numeric" value={l.step ?? ''} onChange={(e) => upd(i, { step: e.target.value === '' ? '' : Number(e.target.value.replace(/\D/g, '')) })} />
+              <MoneyInput value={l.step ?? ''} onChange={(v) => upd(i, { step: v })} />
               <span className="muted">{currency}</span>
             </span>
             {!last && <button type="button" className="btn sm ghost" onClick={() => remove(i)}>✕</button>}
@@ -77,11 +117,12 @@ function AuctionRules({ value, onSave }) {
       <h2>Auction rules</h2>
       <div className="form-grid">
         <Field label="Currency label"><input className="input" value={a.currency} onChange={(e) => set('currency')(e.target.value)} placeholder="pts / ₹ / L" /></Field>
-        <NumField label="Team budget" value={a.teamBudget} onChange={set('teamBudget')} />
-        <NumField label="Default base price" value={a.defaultBasePrice} onChange={set('defaultBasePrice')} hint="For players without a tier" />
+        <DecimalsControl value={a.decimals || 0} />
+        <MoneyField label="Team budget" value={a.teamBudget} onChange={set('teamBudget')} />
+        <MoneyField label="Default base price" value={a.defaultBasePrice} onChange={set('defaultBasePrice')} hint="For players without a tier" />
         <NumField label="Min squad size" value={a.minSquadSize} onChange={set('minSquadSize')} />
         <NumField label="Max squad size" value={a.maxSquadSize} onChange={set('maxSquadSize')} />
-        <NumField label="Reserve per open slot" value={a.reservePerSlot} onChange={set('reservePerSlot')} hint="Money a team must keep for each player still needed" />
+        <MoneyField label="Reserve per open slot" value={a.reservePerSlot} onChange={set('reservePerSlot')} hint="Money a team must keep for each player still needed" />
       </div>
 
       <h2 style={{ marginTop: 10 }}>Tiers & base prices</h2>
@@ -89,7 +130,7 @@ function AuctionRules({ value, onSave }) {
       {a.tiers.map((t, i) => (
         <div key={i} className="row wrap"> {/* eslint-disable-line react/no-array-index-key */}
           <input className="input" style={{ maxWidth: 160 }} value={t.name} onChange={(e) => set('tiers')(a.tiers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-          <input className="input" style={{ maxWidth: 110 }} inputMode="numeric" value={t.basePrice} onChange={(e) => set('tiers')(a.tiers.map((x, j) => (j === i ? { ...x, basePrice: num(e.target.value.replace(/\D/g, '')) } : x)))} />
+          <MoneyInput style={{ maxWidth: 110 }} value={t.basePrice} onChange={(v) => set('tiers')(a.tiers.map((x, j) => (j === i ? { ...x, basePrice: v } : x)))} />
           <input className="input" type="color" style={{ width: 56, padding: 4 }} value={t.color} onChange={(e) => set('tiers')(a.tiers.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)))} />
           <button type="button" className="btn sm ghost" onClick={() => set('tiers')(a.tiers.filter((_, j) => j !== i))}>✕</button>
         </div>
@@ -155,7 +196,7 @@ export default function SettingsAdmin({ ChangePassword, onAuthChange }) {
   // Live: reload when anything changes. Each form below is keyed by its own settings, so it
   // only resets when those settings really changed (not on every sale or team edit).
   useEffect(() => {
-    call('/admin/settings').then(setS).catch(() => {});
+    call('/admin/settings').then((x) => { setMoneyDecimals(x.auction?.decimals); setS(x); }).catch(() => {});
   }, [call, auction.state?.dataV]);
   if (!s) return <Spinner />;
   const save = (section, value) => run(async () => {
