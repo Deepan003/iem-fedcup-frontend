@@ -179,7 +179,16 @@ function CaptainRoom({ auth, onLogout }) {
   // Wide screens: use the space either side. Left = your team, right = the competition.
   const budgetTotal = me?.budgetTotal ?? ((me?.purse ?? 0) + (me?.spent ?? 0) + (me?.penalty ?? 0));
   const mySquad = [...(me?.squad || [])].sort((a, b) => (b.isCaptain - a.isCaptain) || ((b.price || 0) - (a.price || 0)));
-  const captainOnly = me?.captainPosition && !mySquad.some((p) => p.isCaptain);
+  const capName = (me?.captainName || '').trim().toLowerCase();
+  const capListed = mySquad.some((p) => p.isCaptain || (capName && p.name.trim().toLowerCase() === capName));
+  const captainOnly = me?.captainPosition && !capListed;
+  // the full squad for the list, captain first (even when the captain is only a name on the team)
+  const squadList = capName && !capListed
+    ? [{
+      id: 'captain', name: me.captainName, position: me.captainPosition || null, isCaptain: true, photoUrl: me.captainPhotoUrl, price: null,
+    }, ...mySquad]
+    : mySquad.map((p) => (capName && !p.isCaptain && p.name.trim().toLowerCase() === capName ? { ...p, isCaptain: true } : p))
+      .sort((a, b) => (b.isCaptain - a.isCaptain) || ((b.price || 0) - (a.price || 0)));
   const posCount = (pos) => mySquad.filter((p) => p.position === pos).length + (captainOnly && me.captainPosition === pos ? 1 : 0);
   const slotsTotal = me?.slotsLeft != null ? (me.count ?? mySquad.length) + me.slotsLeft : null;
   const table = [...state.teams].sort((a, b) => (b.purse ?? 0) - (a.purse ?? 0));
@@ -232,15 +241,15 @@ function CaptainRoom({ auth, onLogout }) {
           ))}
         </div>
       </div>
-      {mySquad.length > 0 && (
+      {squadList.length > 0 && (
         <div className="cs-block cs-list">
-          <span className="label">Your players</span>
-          {mySquad.map((p) => (
+          <span className="label">Your players · {squadList.length}</span>
+          {squadList.map((p) => (
             <div key={p.id} className="cs-row">
               <Avatar player={p} size={26} />
               <span className="ellipsis">{p.name}{p.isCaptain ? ' (C)' : ''}</span>
               <span className="tiny">{POS_SHORT[p.position]}</span>
-              <b className="mono small">{p.isCaptain ? 'C' : money(p.price, state.currency)}</b>
+              <b className="mono small">{p.isCaptain && !p.price ? 'C' : money(p.price, state.currency)}</b>
             </div>
           ))}
         </div>

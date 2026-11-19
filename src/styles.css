@@ -874,3 +874,8 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
   white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.15;
 }
 .cs-row, .sale-row { align-items: center; }
+/* captain side panels: show everything (no inner scroll boxes hiding players) */
+@media (min-width: 1240px) {
+  .cap-side { position: static; max-height: none; overflow: visible; }
+}
+.cs-list { max-height: none; overflow: visible; }
