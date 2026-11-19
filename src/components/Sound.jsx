@@ -67,12 +67,10 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
   useEffect(() => {
     if ((unlocked && !speechBlocked) || !prefs.on || !surfaceAllowed(audio, surface)) return undefined;
     const go = () => { sound.unlock(); };
-    window.addEventListener('pointerdown', go, { once: true });
-    window.addEventListener('keydown', go, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', go);
-      window.removeEventListener('keydown', go);
-    };
+    // every event Safari treats as a user gesture (pointerdown alone isn't always enough on WebKit)
+    const events = ['pointerdown', 'pointerup', 'click', 'touchend', 'keydown'];
+    events.forEach((ev) => window.addEventListener(ev, go, { once: true, passive: true }));
+    return () => events.forEach((ev) => window.removeEventListener(ev, go));
   }, [unlocked, speechBlocked, prefs.on, audioKey, surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // React to state changes.

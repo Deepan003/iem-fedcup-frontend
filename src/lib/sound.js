@@ -273,12 +273,28 @@ class SoundEngine {
   async unlock() {
     try {
       if (!this.ctx && !this.buildGraph()) return false;
-      if (this.ctx.state === 'suspended') await this.ctx.resume();
+      // Safari (Mac/iPhone) only allows sound started *inside* the click, before any await:
+      // play a silent buffer, wake speech and prime every music element right now.
+      try {
+        const src = this.ctx.createBufferSource();
+        src.buffer = this.ctx.createBuffer(1, 1, 22050);
+        src.connect(this.ctx.destination);
+        src.start(0);
+      } catch { /* ignore */ }
+      const resuming = this.ctx.state !== 'running' ? this.ctx.resume() : null;
       if (window.speechSynthesis) {
         const u = new SpeechSynthesisUtterance(' ');
         u.volume = 0;
         window.speechSynthesis.speak(u);
       }
+      for (const el of Object.values(this.music)) {
+        if (!el.paused || el._primed) continue;
+        el._primed = true;
+        el.muted = true;
+        el.play().then(() => { if (el.muted) { el.pause(); el.currentTime = 0; } el.muted = false; }).catch(() => { el.muted = false; });
+      }
+      this.loadBuffers();
+      if (resuming) await resuming;
       this.speechBlocked = false; // a click/tap: the voice is allowed from now on
       this.unlocked = true;
       this.applyLevels();
@@ -310,7 +326,7 @@ class SoundEngine {
 
   can() {
     // the browser can suspend audio (device change, power saving): wake it back up
-    if (this.ctx?.state === 'suspended' && this.unlocked) this.ctx.resume().catch(() => {});
+    if ((this.ctx?.state === 'suspended' || this.ctx?.state === 'interrupted') && this.unlocked) this.ctx.resume().catch(() => {});
     return this.active && this.ctx;
   }
 
@@ -407,11 +423,7 @@ class SoundEngine {
   /** Crowd reaction to a bid: an "ooh" that grows with the heat (0..1). */
   swell(heat = 0) {
     if (!this.can() || !this.crowdOn || heat <= 0.05) return;
-    const t = this.t;
-    const g = 0.12 + heat * 0.32;
-    this.noise(t, 0.9 + heat, g, { type: 'bandpass', freq: 520 + heat * 380, q: 1.6, attack: 0.18, dest: this.master });
-    this.noise(t + 0.05, 0.7 + heat, g * 0.5, { type: 'bandpass', freq: 1100 + heat * 600, q: 2, attack: 0.2, dest: this.master });
-    this.heat(heat);
+    this.heat(heat); // (no noise burst per bid: on speakers it was just a "shrrr" hiss)
   }
 
   /** Room tension: the crowd murmur rises with the heat and settles back down. */
@@ -419,7 +431,7 @@ class SoundEngine {
     if (!this.crowdBus || !this.crowdOn) return;
     this.heatLevel = clamp(level, 0, 1);
     this.crowdBus.gain.setTargetAtTime(this.crowdLevel(), this.t, 0.4);
-    if (this.crowdFilter) this.crowdFilter.frequency.setTargetAtTime(700 + this.heatLevel * 500, this.t, 0.5);
+    if (this.crowdFilter) this.crowdFilter.frequency.setTargetAtTime(420 + this.heatLevel * 220, this.t, 0.5);
   }
 
   /** Countdown beep for the last seconds (higher for the final three), with a heartbeat under it. */
@@ -680,7 +692,7 @@ class SoundEngine {
     const t = this.t;
     const dur = big ? 3.8 : 2.4;
     const peak = (big ? 0.55 : 0.38) * this.level('sfx');
-    for (const [freq, q, p] of [[600, 0.7, 1], [1400, 1.1, 0.7], [2600, 1.6, 0.35]]) {
+    for (const [freq, q, p] of [[500, 0.8, 1], [1100, 1.2, 0.45]]) {
       const src = this.ctx.createBufferSource();
       src.buffer = this.noiseBuffer(4);
       const f = this.ctx.createBiquadFilter();
@@ -738,9 +750,9 @@ class SoundEngine {
         src.buffer = this.noiseBuffer(4);
         src.loop = true;
         const f = this.ctx.createBiquadFilter();
-        f.type = 'bandpass';
-        f.frequency.value = 700;
-        f.Q.value = 0.6;
+        f.type = 'lowpass';
+        f.frequency.value = 420;
+        f.Q.value = 0.5;
         this.crowdFilter = f;
         const lfo = this.ctx.createOscillator();
         const depth = this.ctx.createGain();
@@ -1110,6 +1122,7 @@ class SoundEngine {
       this.music[slot] = el;
     }
     if (this.bedWanted) this.bed(true);
+    this.loadBuffers();
   }
 
   hasTrack(slot) { return !!this.music[slot]; }
@@ -1138,7 +1151,7 @@ class SoundEngine {
 
   /** Crowd murmur level: rises with the heat, dips under the announcer. */
   crowdLevel() {
-    return (0.09 + (this.heatLevel || 0) * 0.16) * this.level('sfx') * (this.speaking ? 0.45 : 1);
+    return (0.05 + (this.heatLevel || 0) * 0.07) * this.level('sfx') * (this.speaking ? 0.45 : 1);
   }
 
   fade(el, to, seconds) {
@@ -1199,9 +1212,33 @@ class SoundEngine {
   }
 
   /** A short uploaded effect clip (overlapping allowed). Returns false when no clip is uploaded. */
+  /** Decode uploaded short effects into Web Audio buffers (played instantly, and allowed on Safari). */
+  loadBuffers() {
+    if (!this.ctx) return;
+    this.buffers = this.buffers || {};
+    for (const slot of ['bid', 'newPlayer', 'hammer', 'record', 'unsold']) {
+      const url = this.trackUrls[slot];
+      if (!url || this.buffers[slot]?.url === url) continue;
+      this.buffers[slot] = { url, buf: null };
+      fetch(url).then((r) => r.arrayBuffer()).then((ab) => new Promise((ok, bad) => this.ctx.decodeAudioData(ab, ok, bad)))
+        .then((buf) => { if (this.buffers[slot]?.url === url) this.buffers[slot].buf = buf; })
+        .catch(() => { /* falls back to the <audio> element */ });
+    }
+  }
+
   clip(slot, vol = 1) {
     const el = this.music[slot];
     if (!el || !this.active) return false;
+    const b = this.buffers?.[slot]?.buf;
+    if (b && this.ctx) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = b;
+      const g = this.ctx.createGain();
+      g.gain.value = clamp(vol, 0, 1);
+      src.connect(g).connect(this.sfxBus);
+      src.start();
+      return true;
+    }
     try {
       const a = el.cloneNode(true);
       a.volume = clamp(this.level('sfx') * vol, 0, 1);
@@ -1250,18 +1287,16 @@ class SoundEngine {
     if (kind === 'urgent') {
       this.voiceGen += 1;
       this.voiceQueue = [];
+      this.pendingBid = null;
       window.speechSynthesis.cancel();
       this.speaking = false;
     } else if (kind === 'bid') {
       // a new bid resets the clock: drop older bid calls and any pending 'going once / twice'
       this.voiceQueue = this.voiceQueue.filter((q) => q.kind !== 'bid' && q.kind !== 'going');
-      // ...and cut off a bid call that is still being spoken: it is already out of date
-      if (this.speaking && this.currentKind !== 'urgent') {
-        this.voiceGen += 1;
-        window.speechSynthesis.cancel();
-        this.voiceQueue.push({ text, kind, mood });
-        this.speaking = true;
-        setTimeout(() => this.nextLine(), 30); // Chrome drops a speak() issued in the same tick as cancel()
+      // still talking: don't interrupt and don't queue every price; keep only the newest bid
+      // and call it when the announcer has a moment (in a frenzy it skips the in-between prices)
+      if (this.speaking) {
+        this.pendingBid = { text, kind, mood, at: Date.now() };
         return;
       }
     }
@@ -1270,7 +1305,11 @@ class SoundEngine {
   }
 
   nextLine() {
-    const item = this.voiceQueue.shift();
+    let item = this.voiceQueue.shift();
+    if (!item && this.pendingBid) {
+      item = Date.now() - this.pendingBid.at < 8000 ? this.pendingBid : null; // newest bid, if still fresh
+      this.pendingBid = null;
+    }
     if (!item) {
       this.speaking = false;
       this.updateMusicVolume();
@@ -1315,6 +1354,7 @@ class SoundEngine {
   stopVoice() {
     this.voiceGen += 1;
     this.voiceQueue = [];
+    this.pendingBid = null;
     window.speechSynthesis?.cancel();
     this.speaking = false;
   }
