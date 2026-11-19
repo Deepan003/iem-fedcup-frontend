@@ -1,5 +1,5 @@
 import { fmtAmount, money, POS_SHORT } from '../lib/format.js';
-import { TeamLogo } from './ui.jsx';
+import { Avatar, TeamLogo } from './ui.jsx';
 
 /** Standings-style purse table (fields hidden by the admin are simply absent). */
 export function PurseStrip({ state, highlight }) {
@@ -58,7 +58,7 @@ export function SquadCard({ team, currency }) {
           {team.squad.length === 0 && <span className="tiny" style={{ paddingTop: 8 }}>No players yet</span>}
           {team.squad.map((p) => (
             <div key={p.id}>
-              <span className="ellipsis"><span className="p">{POS_SHORT[p.position]}</span>{p.name}{p.isCaptain ? ' · C' : p.retained ? ' · R' : ''}</span>
+              <span className="ellipsis sq-who"><Avatar player={p} size={26} /><span className="p">{POS_SHORT[p.position]}</span>{p.name}{p.isCaptain ? ' · C' : p.retained ? ' · R' : ''}</span>
               {p.price !== undefined && <span className="mono small muted">{money(p.price, currency)}</span>}
             </div>
           ))}

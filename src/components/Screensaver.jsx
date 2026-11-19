@@ -3,8 +3,9 @@ import { assetUrl } from '../lib/api.js';
 import {
   initials, money, POSITIONS, POS_SHORT, teamById,
 } from '../lib/format.js';
-import { TeamLogo } from './ui.jsx';
+import { Avatar, TeamLogo } from './ui.jsx';
 import { BrandMark } from './Nav.jsx';
+import { sound } from '../lib/sound.js';
 import '../screensaver.css';
 
 const shuffled = (arr) => {
@@ -173,7 +174,7 @@ function Top3Slide({ state }) {
 
 /** Replays a sale's bids one by one, then stamps SOLD. */
 function StorySlide({
-  story, title, state, secs,
+  story, title, state, secs, sfx,
 }) {
   const steps = story.history;
   const [n, setN] = useState(0);
@@ -188,6 +189,15 @@ function StorySlide({
   const leader = last && teamById(state, last.teamId);
   const buyer = teamById(state, story.teamId);
   const done = n >= steps.length;
+  useEffect(() => {
+    if (!sfx || n === 0) return;
+    if (n < steps.length) sound.bid(1 + (n / steps.length) * 3, n / steps.length > 0.6 ? 0.5 : 0.15);
+    else {
+      sound.gavel(1);
+      sound.soldSting(true);
+      sound.cheer(false);
+    }
+  }, [n, sfx]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="ss-slide ss-story" style={{ '--c': (done ? buyer : leader)?.color }}>
       <div className="ss-story-left">
@@ -244,6 +254,7 @@ function TeamSlide({ team, cur }) {
           {squad.length === 0 && <li className="ss-meta">No players yet</li>}
           {squad.slice(0, 15).map((p, i) => (
             <li key={p.id} style={{ animationDelay: `${0.3 + i * 0.05}s` }}>
+              <Avatar player={p} size={40} className="ss-av" />
               <span className="ss-pos">{POS_SHORT[p.position]}</span>
               <span className="ss-nm">{p.name}{p.isCaptain ? ' (C)' : ''}</span>
               {p.price !== undefined && <span className="ss-p">{p.isCaptain ? 'C' : money(p.price, cur)}</span>}
@@ -337,6 +348,26 @@ export default function Screensaver({ state }) {
     return () => clearInterval(t);
   }, [active, order.length, secs]);
 
+  // music and effects on the studio screensaver (Audio settings: "Screensaver sounds")
+  const sfx = state?.audio?.screenSfx !== false;
+  useEffect(() => {
+    sound.screensMusic(!!(active && sfx));
+  }, [active, sfx]);
+  useEffect(() => () => sound.screensMusic(false), []);
+  const curSlide = slides.find((x) => x.key === order[idx]);
+  useEffect(() => {
+    if (!active || !sfx || !curSlide) return undefined;
+    const timers = [];
+    const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+    sound.swoosh(idx % 2 ? -1 : 1);
+    if (curSlide.kind === 'retained') curSlide.players.slice(0, 8).forEach((_, i) => at(380 + i * 160, () => sound.deal(i)));
+    if (curSlide.kind === 'top3') { at(150, () => sound.drumroll(1.2)); at(1500, () => sound.shimmer()); }
+    if (curSlide.kind === 'teamsAll') state.teams.forEach((_, i) => at(220 + i * 80, () => sound.deal(i)));
+    if (curSlide.kind === 'team') { at(250, () => sound.riser(0.7, 0.1)); at(950, () => sound.shimmer()); }
+    if (curSlide.kind === 'custom') at(120, () => sound.riser(1, 0.12));
+    return () => timers.forEach(clearTimeout);
+  }, [curSlide?.key, idx, active, sfx]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!mounted || !state) return null;
   const slide = slides.find((s) => s.key === order[idx]) || slides[0] || { kind: 'brand', key: 'brand' };
   const cur = state.currency;
@@ -344,7 +375,7 @@ export default function Screensaver({ state }) {
   let body;
   if (slide.kind === 'retained') body = <RetainedSlide team={slide.team} players={slide.players} cur={cur} />;
   else if (slide.kind === 'top3') body = <Top3Slide state={state} />;
-  else if (slide.kind === 'story') body = <StorySlide story={slide.story} title={slide.title} state={state} secs={secs} />;
+  else if (slide.kind === 'story') body = <StorySlide story={slide.story} title={slide.title} state={state} secs={secs} sfx={sfx} />;
   else if (slide.kind === 'team') body = <TeamSlide team={slide.team} cur={cur} />;
   else if (slide.kind === 'teamsAll') body = <TeamsAllSlide state={state} />;
   else if (slide.kind === 'custom') body = <CustomSlide title={slide.title} text={slide.text} />;

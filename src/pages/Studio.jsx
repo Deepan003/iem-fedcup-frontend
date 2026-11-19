@@ -4,7 +4,9 @@ import { useAuction } from '../lib/auction.js';
 import { money, teamById } from '../lib/format.js';
 import LotStage, { SoldOverlay } from '../components/LotStage.jsx';
 import { PurseStrip, SquadCard } from '../components/Teams.jsx';
-import { MiniPlayer, Spinner, TeamLogo } from '../components/ui.jsx';
+import {
+  Avatar, MiniPlayer, Spinner, TeamLogo,
+} from '../components/ui.jsx';
 import { BrandMark } from '../components/Nav.jsx';
 import TeamReveal from '../components/TeamReveal.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
@@ -61,7 +63,7 @@ export default function Studio() {
                   const t = teamById(state, s.teamId);
                   return (
                     <div key={s.seq} className="sale-row">
-                      <TeamLogo team={t} size={26} />
+                      <Avatar player={s.player} team={t} size={34} />
                       <span className="ellipsis small"><b style={{ fontFamily: 'var(--sans)' }}>{s.player?.name}</b><br /><span className="tiny">{t?.name}</span></span>
                       <b>{money(s.price, state.currency)}</b>
                     </div>
@@ -73,8 +75,8 @@ export default function Studio() {
                   <div className="label" style={{ marginBottom: 6 }}>Top buys</div>
                   {state.stats.topBuys.map((b, i) => (
                     <div key={b.playerId} className="sale-row">
-                      <span className="idx" style={{ fontSize: 13 }}>{String(i + 1).padStart(2, '0')}</span>
-                      <span className="ellipsis small">{b.name}</span>
+                      <Avatar player={b} team={teamById(state, b.teamId)} size={34} />
+                      <span className="ellipsis small"><span className="idx" style={{ fontSize: 12, marginRight: 6 }}>{String(i + 1).padStart(2, '0')}</span>{b.name}</span>
                       <b>{money(b.price, state.currency)}</b>
                     </div>
                   ))}

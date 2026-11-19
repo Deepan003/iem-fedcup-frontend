@@ -5,34 +5,13 @@ import {
   listVoices, loadPrefs, pickVoice, savePrefs, sound,
 } from '../lib/sound.js';
 import { fmtAmount, teamById } from '../lib/format.js';
+import { flavor, line, milestoneWord } from '../lib/commentary.js';
 import '../sound.css';
 
 const CURRENCY_WORD = {
   pts: 'points', pt: 'points', points: 'points', '₹': 'rupees', rs: 'rupees', inr: 'rupees', l: 'lakh', cr: 'crore', k: 'thousand',
 };
 const say$ = (n, cur) => `${fmtAmount(n || 0)} ${CURRENCY_WORD[String(cur || '').toLowerCase()] ?? (cur || '')}`.trim();
-
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-/** Varied, human announcer lines (picked at random so it never sounds robotic). */
-const LINES = {
-  welcome: (title) => [`Welcome to the ${title}! Let's get started.`, `Good evening, and welcome to the ${title}! Let the bidding begin!`, `Welcome, everyone, to the ${title}! It's auction time!`],
-  next: (n, bits, base) => [`Next up: ${n}. ${bits}Base price, ${base}.`, `Coming to the block: ${n}. ${bits}Starting at ${base}.`, `Here's our next player, ${n}. ${bits}Base price, ${base}.`],
-  open: ['Bidding is open!', 'The floor is open. Who wants him?', "Bidding is open. Let's see those paddles!", 'Over to the captains. Bidding is open!'],
-  bid: (amt, team, m) => (m >= 3
-    ? [`${amt}! ${team}!`, `${amt} from ${team}! This is getting serious!`, `Wow! ${amt}, ${team}!`]
-    : m >= 2
-      ? [`${team} go to ${amt}!`, `${amt} now, ${team}.`, `${amt}, ${team}!`]
-      : [`${amt}, ${team}.`, `${team}, ${amt}.`, `${amt} from ${team}.`]),
-  sold: (n, t, a) => [`Sold! ${n}, to ${t}, for ${a}!`, `And it's sold! ${n} goes to ${t} for ${a}!`, `Hammer down! ${n} joins ${t} for ${a}!`],
-  soldBig: (n, t, a) => [`Sold! What a signing! ${n} to ${t} for ${a}!`, `Hammer down! ${t} land ${n} for a massive ${a}!`, `Sold! ${t} pay big, ${a}, for ${n}!`],
-  record: ["That's a new auction record!", 'History made! A brand new auction record!', 'Unbelievable! A new record!'],
-  unsold: (n) => [`No takers. ${n} goes unsold.`, `${n} goes unsold, for now.`, `Nothing doing. ${n} is unsold.`],
-  closed: ['Bidding is closed.', 'And bidding is closed.', 'Time is up!'],
-  paused: ["We'll take a short break.", 'The auction is paused.', 'Quick pause, folks. Stay with us.'],
-  resumed: ["And we're back!", "We're back. Let's carry on!"],
-  end: ['And that is full time on the auction! Thank you all for watching!', "That's a wrap! Thank you, everyone, for an amazing auction!"],
-};
 
 const subscribe = (fn) => sound.onChange(fn);
 const isUnlocked = () => sound.unlocked;
@@ -54,6 +33,8 @@ const snap = (s) => ({
   leaderId: s.lot?.leaderId ?? null,
   record: s.stats?.records?.overall?.price ?? 0,
 });
+
+const RAPID_MS = 2600; // bids closer together than this get quick-fire calls
 
 /**
  * Plays the auction: effects, voice and music react to live state changes.
@@ -87,6 +68,7 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
 
   // React to state changes.
   const prev = useRef(null);
+  const lotMem = useRef({ seq: null, bidders: new Set(), leaders: [], lastAt: 0, bids: 0 });
   useEffect(() => {
     if (!state) return;
     const p = prev.current;
@@ -101,51 +83,87 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
     const lot = state.lot;
     const pl = lot?.player || {};
     const team = (id) => teamById(state, id);
+    const title = state.studio?.title || 'IEM FED Cup auction';
 
     // Auction start / end / pause
     if (p.status !== 'live' && s.status === 'live') {
       sound.whistle();
       sound.play('intro');
-      sound.say(pick(LINES.welcome(state.studio?.title || 'IEM FED Cup auction')), 'urgent', 'hype');
+      sound.say(line('welcome', { title }), 'urgent', 'hype');
     }
     if (p.status === 'live' && s.status === 'ended') {
       sound.gavel(3);
       sound.cheer(true);
       sound.stop('bed', 2);
       sound.play('end');
-      sound.say(pick(LINES.end), 'urgent', 'excited');
+      sound.say(line('end'), 'urgent', 'excited');
     }
     if (s.status === 'live' && p.status === 'live') {
-      if (!p.paused && s.paused) sound.say(pick(LINES.paused), 'urgent', 'calm');
-      if (p.paused && !s.paused) sound.say(pick(LINES.resumed), 'info', 'excited');
+      if (!p.paused && s.paused) sound.say(line('paused'), 'urgent', 'calm');
+      if (p.paused && !s.paused) sound.say(line('resumed'), 'info', 'excited');
     }
     if (!lot) return;
 
     const newLot = s.seq !== p.seq;
+    if (newLot || lotMem.current.seq !== s.seq) {
+      lotMem.current = { seq: s.seq, bidders: new Set(), leaders: [], lastAt: 0, bids: 0 };
+    }
     if (newLot) {
       sound.whoosh();
+      sound.heat(0);
       const bits = [pl.position, pl.tier ? `${pl.tier} tier` : ''].filter(Boolean).join(', ');
       sound.stop('intro', 1.5); // the show is underway: let the intro make way for the bed
-      sound.say(pick(LINES.next(pl.name, bits ? `${bits}. ` : '', say$(lot.base, cur))), 'urgent', 'normal');
+      sound.say(line('next', { p: pl.name, bits: `${bits ? `${bits}. ` : ''}${flavor(pl.position)}`, base: say$(lot.base, cur) }), 'urgent', 'normal');
     }
     const phaseNow = newLot || s.phase !== p.phase;
 
     if (phaseNow && s.phase === 'bidding' && (newLot || p.phase === 'reveal')) {
       sound.horn();
-      sound.say(pick(LINES.open), 'info', 'excited');
+      sound.say(line('open'), 'info', 'excited');
     }
 
     // A new bid on the same lot
     if (!newLot && s.amount != null && s.amount !== p.amount && ['bidding', 'awaiting'].includes(s.phase)) {
       const up = p.amount == null || s.amount > p.amount;
       if (up) {
-        sound.bid(s.amount / Math.max(1, lot.base));
+        const m = lotMem.current;
+        const at = Date.now();
+        const gap = m.lastAt ? at - m.lastAt : Infinity;
+        const rapid = gap < RAPID_MS;
+        m.lastAt = at;
+        m.bids += 1;
+        const base = Math.max(1, lot.base);
+        const mult = s.amount / base;
+        const prevMult = (p.amount ?? lot.base) / base;
+        // heat: how high the price has gone + how fast bids are flying
+        const heat = Math.min(1, Math.max(0, (mult - 1) / 4) * 0.6 + (rapid ? 0.4 : gap < 5000 ? 0.2 : 0));
+        sound.bid(mult, heat);
+
         const call = state.audio?.callBids || 'every';
         const leaderChanged = s.leaderId !== p.leaderId;
-        if (call === 'every' || (call === 'leader' && leaderChanged)) {
-          const t = team(s.leaderId);
-          const mult = s.amount / Math.max(1, lot.base);
-          sound.say(t ? pick(LINES.bid(say$(s.amount, cur), t.name, mult)) : `${say$(s.amount, cur)}.`, 'bid', mult >= 3 ? 'hype' : mult >= 2 ? 'excited' : 'normal');
+        const t = team(s.leaderId);
+        const newBidder = s.leaderId && !m.bidders.has(s.leaderId);
+        if (s.leaderId) m.bidders.add(s.leaderId);
+        m.leaders = [...m.leaders, s.leaderId].slice(-4);
+        if (t && (call === 'every' || (call === 'leader' && leaderChanged))) {
+          const v = { a: say$(s.amount, cur), n: fmtAmount(s.amount), t: t.name };
+          const pair = [...new Set(m.leaders)];
+          const war = m.leaders.length === 4 && pair.length === 2 && m.leaders[0] !== m.leaders[1];
+          const x = milestoneWord(prevMult, mult);
+          const jump = p.amount != null && (s.amount - p.amount) >= Math.max(base, p.amount * 0.3);
+          let text;
+          let mood = mult >= 3 ? 'hype' : mult >= 2 ? 'excited' : 'normal';
+          if (rapid) {
+            // keep pace with the room: tiny calls, said fast; a milestone still gets a word in
+            text = x ? `${v.n}! ${x[0].toUpperCase()}${x.slice(1)} the base!` : line('rapid', v);
+            mood = 'rapid';
+          } else if (m.bids === 1) text = line('firstBid', v);
+          else if (x) text = line('milestone', { ...v, x });
+          else if (jump) text = line('jump', v);
+          else if (war && m.bids % 2 === 0) text = line('war', { ...v, t2: team(pair.find((id) => id !== s.leaderId))?.name || 'their rivals' });
+          else if (newBidder && m.bids > 1) text = line('newTeam', v);
+          else text = line(mult >= 3 ? 'bidHuge' : mult >= 2 ? 'bidHot' : 'bid', v);
+          sound.say(text, 'bid', mood);
         }
         if (teamId) {
           if (p.leaderId === teamId && s.leaderId !== teamId) sound.outbid();
@@ -157,30 +175,39 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
     if (phaseNow && !newLot) {
       if (s.phase === 'awaiting') {
         sound.buzzer();
-        sound.say(pick(LINES.closed), 'info', 'tense');
+        sound.say(line('closed'), 'info', 'tense');
       }
       if (s.phase === 'sold') {
         const t = team(s.leaderId);
         const record = p.record > 0 && s.amount > p.record;
+        const base = Math.max(1, lot.base);
+        const big = record || s.amount >= 3 * base;
+        const bids = lot.bidCount || lotMem.current.bids;
         sound.gavel(1);
-        if (!sound.play('sold')) sound.soldSting();
-        sound.cheer(record);
-        const big = record || s.amount >= 3 * Math.max(1, lot.base);
-        sound.say(pick((big ? LINES.soldBig : LINES.sold)(pl.name, t?.name || 'the team', say$(s.amount, cur))), 'urgent', big ? 'hype' : 'excited');
+        if (!sound.play('sold')) sound.soldSting(big);
+        sound.cheer(big);
+        const v = {
+          p: pl.name, t: t?.name || 'the team', a: say$(s.amount, cur), bids,
+        };
+        let key = 'sold';
+        if (big) key = 'soldBig';
+        else if (bids >= 8) key = 'soldWar';
+        else if (s.amount <= base) key = 'soldBase';
+        sound.say(line(key, v), 'urgent', big ? 'hype' : 'excited');
         if (record) {
           setTimeout(() => sound.chime(), 900);
-          sound.say(pick(LINES.record), 'info', 'hype');
+          sound.say(line('record'), 'info', 'hype');
         }
         if (teamId && s.leaderId === teamId) sound.leading();
       }
       if (s.phase === 'unsold') {
         sound.unsold();
-        sound.say(pick(LINES.unsold(pl.name)), 'urgent', 'sad');
+        sound.say(line('unsold', { p: pl.name }), 'urgent', 'sad');
       }
     }
   }, [state, unlocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Countdown: beeps in the last five seconds, "going once / going twice".
+  // Countdown: beeps + heartbeat in the last five seconds, "going once / going twice" with a riser.
   const lot = state?.lot;
   useEffect(() => {
     if (!lot || lot.phase !== 'bidding' || lot.endsAt == null || state?.paused || !unlocked) return undefined;
@@ -192,8 +219,11 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
       if (sec <= 5) sound.beep(sec <= 3);
       if (state?.audio?.goingOnceTwice !== false && lot.amount != null) {
         // queued one second early: speech starts a beat after it is requested
-        if (sec === 5) sound.say('Going once…', 'going', 'tense');
-        if (sec === 3) sound.say(pick(['Going twice…', 'Last chance… going twice…']), 'going', 'tense');
+        if (sec === 5) sound.say(line('goingOnce'), 'going', 'tense');
+        if (sec === 3) {
+          sound.riser(2.6, 0.18);
+          sound.say(line('goingTwice'), 'going', 'tense');
+        }
       }
     }, 100);
     return () => clearInterval(iv);
@@ -209,6 +239,26 @@ export async function previewVoice(audio, line, mood = 'excited') {
   sound.configure({ settings: { ...audio, enabled: true, voice: true }, prefs: { ...keepPrefs, on: true, voice: true }, surface: 'admin' });
   sound.bid(2);
   sound.say(line || 'Sold! Arjun Sen, to Radical Reds, for 300 points!', 'urgent', mood);
+}
+
+/** Admin preview of a whole moment: a fast bidding war, or a big sale with the crowd. */
+export async function previewMoment(audio, kind) {
+  await sound.unlock();
+  sound.configure({ settings: { ...audio, enabled: true, voice: true, crowd: true }, prefs: { ...sound.prefs, on: true, voice: true }, surface: 'admin' });
+  sound.stopVoice();
+  if (kind === 'war') {
+    const teams = ['Radical Reds', 'Blue Hawks'];
+    [120, 130, 140, 150, 160, 180].forEach((amt, i) => setTimeout(() => {
+      const mult = amt / 50;
+      sound.bid(mult, Math.min(1, 0.3 + i * 0.12));
+      sound.say(i === 0 ? line('firstBid', { a: `${amt} points`, n: amt, t: teams[0] }) : line('rapid', { n: amt, t: teams[i % 2] }), 'bid', i === 0 ? 'excited' : 'rapid');
+    }, i * 1100));
+    return;
+  }
+  sound.gavel(1);
+  sound.soldSting(true);
+  sound.cheer(true);
+  sound.say(line('soldBig', { p: 'Arjun Sen', t: 'Radical Reds', a: '300 points' }), 'urgent', 'hype');
 }
 
 function useVoices() {
@@ -244,7 +294,7 @@ export function SoundDock({
   if (!surfaceAllowed(audio, surface)) return null;
   const set = (k) => (v) => setPrefs({ ...prefs, [k]: v });
   const on = prefs.on && unlocked;
-  const auto = pickVoice(audio?.voiceGender)?.name;
+  const auto = pickVoice(audio?.voiceGender, '', audio?.voiceAccent || 'auto')?.name;
 
   if (prefs.on && !unlocked) {
     return (

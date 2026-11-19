@@ -9,7 +9,7 @@ import { money, POS_SHORT, teamById } from '../lib/format.js';
 import LotStage, { SoldOverlay } from '../components/LotStage.jsx';
 import { PurseStrip, SquadCard } from '../components/Teams.jsx';
 import {
-  Field, MiniPlayer, Spinner, TeamLogo, useAction, useToast,
+  Avatar, Field, MiniPlayer, Spinner, TeamLogo, useAction, useToast,
 } from '../components/ui.jsx';
 import { RollingNumber } from '../components/fx.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
@@ -149,7 +149,7 @@ function SquadBuilder({ team, currency, plan, formations, onChange }) {
         {bench.map((p) => (
           <button type="button" key={p.id} className="bench-row" style={{ cursor: sel ? 'pointer' : 'default', color: sel ? 'var(--bone)' : undefined }} onClick={() => sel && assign(sel, p.id)}>
             <span className="label">{POS_SHORT[p.position]}</span>
-            <span className="ellipsis">{p.name}{p.retained ? ' · R' : ''}</span>
+            <span className="ellipsis sq-who"><Avatar player={p} size={28} />{p.name}{p.retained ? ' · R' : ''}</span>
             <span className="mono small muted">{money(p.price, currency)}</span>
           </button>
         ))}

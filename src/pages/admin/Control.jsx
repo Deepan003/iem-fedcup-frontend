@@ -4,7 +4,7 @@ import { money, teamById, POS_SHORT } from '../../lib/format.js';
 import LotStage from '../../components/LotStage.jsx';
 import { PurseStrip } from '../../components/Teams.jsx';
 import {
-  Field, Spinner, TeamLogo, useToast, MoneyInput, useAction,
+  Avatar, Field, Spinner, TeamLogo, useToast, MoneyInput, useAction,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
@@ -298,7 +298,7 @@ export default function Control() {
               const t = teamById(state, s.teamId);
               return (
                 <div key={s.seq} className="list-row small">
-                  <TeamLogo team={t} size={22} />
+                  <Avatar player={s.player} team={t} size={30} />
                   <span className="grow ellipsis"><b>{s.player?.name}</b> → {t?.name}{s.via !== 'auction' ? ` (${s.via})` : ''}</span>
                   <b>{money(s.price, state.currency)}</b>
                 </div>

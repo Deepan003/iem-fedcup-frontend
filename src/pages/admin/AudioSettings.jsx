@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { assetUrl } from '../../lib/api.js';
 import { Toggle, useAction } from '../../components/ui.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
-import { previewVoice } from '../../components/Sound.jsx';
+import { previewMoment, previewVoice } from '../../components/Sound.jsx';
 import { useAdmin } from './AdminApp.jsx';
 
 const SLOTS = [
@@ -10,6 +10,7 @@ const SLOTS = [
   ['bed', 'Background music', 'Loops quietly after the intro; dips while bidding and under the announcer.'],
   ['sold', 'Sold sting', 'Plays on every sale. Without it, a built-in stadium "sold" hit is used.'],
   ['end', 'Full-time music', 'Plays when the auction ends.'],
+  ['screens', 'Screensaver music', 'Loops while the studio screensaver is on. Without it, built-in calm music plays.'],
 ];
 /* Short effects: each replaces the built-in sound when uploaded (keep them 0.2–3 seconds). */
 const EFFECTS = [
@@ -61,7 +62,8 @@ export default function AudioSettings({ value, tracks = {}, onSave }) {
       <Toggle label="Sound on" hint="Master switch for every screen." checked={v.enabled} onChange={set('enabled')} />
       <Toggle label="Studio / projector" hint="The live show plays effects, voice and music." checked={v.studioSound} onChange={set('studioSound')} />
       <Toggle label="Captains" hint="Bid ticks, timer beeps and an outbid alert (with vibration on Android)." checked={v.captainSound} onChange={set('captainSound')} />
-      <Toggle label="Crowd ambience & cheers" checked={v.crowd} onChange={set('crowd')} />
+      <Toggle label="Crowd ambience & cheers" hint="Murmur that rises as bidding heats up, applause and whistles on sales." checked={v.crowd} onChange={set('crowd')} />
+      <Toggle label="Screensaver sounds" hint="Music and effects while the studio screensaver is on." checked={v.screenSfx !== false} onChange={set('screenSfx')} />
       <Toggle label="Music" hint="Uses the tracks below." checked={v.music} onChange={set('music')} />
       <Slider label="Intro music length" value={v.introSeconds ?? 25} min={0} max={120} suffix={v.introSeconds ? 's' : ' (full)'} onChange={set('introSeconds')} />
 
@@ -75,6 +77,16 @@ export default function AudioSettings({ value, tracks = {}, onSave }) {
         ))}
       </div>
       <label className="aud-slider">
+        <span>Accent</span>
+        <select className="input" value={v.voiceAccent || 'in'} onChange={(e) => set('voiceAccent')(e.target.value)}>
+          <option value="in">Indian English</option>
+          <option value="gb">British English</option>
+          <option value="us">American English</option>
+          <option value="au">Australian English</option>
+          <option value="auto">Best available</option>
+        </select>
+      </label>
+      <label className="aud-slider">
         <span>Call out bids</span>
         <select className="input" value={v.callBids} onChange={(e) => set('callBids')(e.target.value)}>
           <option value="every">Every bid ("120 points, Radical Reds")</option>
@@ -87,8 +99,10 @@ export default function AudioSettings({ value, tracks = {}, onSave }) {
       <div className="row wrap" style={{ gap: 8 }}>
         <button type="button" className="btn sm" onClick={() => previewVoice(v, 'Next up: Arjun Sen. Midfielder, Gold tier. Base price, 50 points.')}>▶ Preview "Next up"</button>
         <button type="button" className="btn sm" onClick={() => previewVoice(v, 'Sold! Arjun Sen, to Radical Reds, for 300 points!')}>▶ Preview "Sold"</button>
+        <button type="button" className="btn sm" onClick={() => previewMoment(v, 'war')}>▶ Fast bidding</button>
+        <button type="button" className="btn sm" onClick={() => previewMoment(v, 'sold')}>▶ Full sold moment</button>
       </div>
-      <p className="muted small" style={{ margin: 0 }}>The voice comes from each device's browser, so it can sound slightly different on the projector laptop and on phones. Viewers can pick another voice from the speaker button.</p>
+      <p className="muted small" style={{ margin: 0 }}>The voice comes from each device's browser, so it can sound slightly different on the projector laptop and on phones. Viewers can pick another voice from the speaker button. For the most natural Indian voices (Prabhat, Neerja) run the studio in Microsoft Edge.</p>
 
       <h3 className="aud-h">Volume</h3>
       <Slider label="Effects" value={v.sfxVolume} onChange={set('sfxVolume')} />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTicker } from '../lib/auction.js';
 import {
-  money, onColor, PHASE_LABEL, POS_SHORT, teamById,
+  initials, money, onColor, PHASE_LABEL, POS_SHORT, teamById,
 } from '../lib/format.js';
 import { PlayerCard, TeamLogo } from './ui.jsx';
 import { RollingNumber } from './fx.jsx';
@@ -32,6 +32,12 @@ export function Countdown({ lot, now, paused }) {
 }
 
 /** Kinetic SOLD sequence in the buying team's colour. */
+// confetti pieces: fixed pseudo-random layout so it doesn't jump between renders
+const CONFETTI = Array.from({ length: 42 }, (_, i) => ({
+  x: `${(i * 37 + 11) % 100}%`, w: `${8 + (i * 7) % 9}px`, d: `${2.2 + ((i * 13) % 14) / 10}s`, delay: `${0.3 + ((i * 17) % 10) / 20}s`,
+  drift: `${((i * 29) % 21) - 10}vw`, r: `${((i * 53) % 720) - 360}deg`, k: ['var(--c)', '#f5c542', '#ffffff'][i % 3],
+}));
+
 export function SoldOverlay({ state }) {
   const [show, setShow] = useState(null);
   const shownSeq = useRef(undefined);
@@ -45,7 +51,7 @@ export function SoldOverlay({ state }) {
     if (lot?.phase === 'sold' && shownSeq.current !== lot.seq) {
       shownSeq.current = lot.seq;
       setShow({
-        team: teamById(state, lot.leaderId), amount: lot.amount, name: lot.player?.name, seq: lot.seq,
+        team: teamById(state, lot.leaderId), amount: lot.amount, name: lot.player?.name, seq: lot.seq, photo: assetUrl(lot.player?.photoUrl || lot.player?.thumbUrl),
       });
     }
   }, [state, lot?.phase, lot?.seq]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -69,11 +75,21 @@ export function SoldOverlay({ state }) {
       <span className="slab s3" />
       <div className="kinetic k1" aria-hidden="true">{run}{run}</div>
       <div className="kinetic k2" aria-hidden="true">{run}{run}</div>
+      <span className="sold-flash" aria-hidden="true" />
+      <div className="sold-confetti" aria-hidden="true">
+        {CONFETTI.map((p, i) => (
+          // eslint-disable-next-line react/no-array-index-key
+          <i key={i} style={{ '--x': p.x, '--w': p.w, '--d': p.d, '--delay': p.delay, '--drift': p.drift, '--r': p.r, '--k': p.k }} />
+        ))}
+      </div>
       <div className="center">
         <div className="sold-stack">
           <div className="word"><span>Sold</span></div>
           <div className="sold-plate">
-            <TeamLogo team={show.team} size={64} />
+            <div className="sold-face">
+              {show.photo ? <img src={show.photo} alt="" /> : <span>{initials(show.name || '')}</span>}
+              <span className="sold-face-logo"><TeamLogo team={show.team} size={44} /></span>
+            </div>
             <div className="sold-plate-text">
               <b>{show.name}</b>
               <span>{show.team?.name}</span>

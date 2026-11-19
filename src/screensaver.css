@@ -197,3 +197,5 @@
   .ss-ghost span, .ss-sparks, .ss-wipe, .ss-photo::before, .ss-card.cap .ss-photo, .ss-step.r1 .ss-photo { animation: none !important; display: revert; }
   .ss-sparks, .ss-wipe { display: none; }
 }
+.ss-squad li { align-items: center; grid-template-columns: 40px 40px 1fr auto; }
+.ss-av { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 70%, transparent); }

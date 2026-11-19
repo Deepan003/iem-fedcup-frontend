@@ -188,6 +188,17 @@ export function PlayerCard({ player, enter = false, showName = true }) {
   );
 }
 
+/** Small player face (thumbnail, or initials when there is no photo); optional team logo badge. */
+export function Avatar({ player, size = 32, team = null, className = '' }) {
+  const url = assetUrl(player?.thumbUrl || player?.photoUrl);
+  return (
+    <span className={`avatar ${className}`} style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}>
+      {url ? <img src={url} alt="" loading="lazy" draggable={false} /> : initials(player?.name || '?')}
+      {team && <span className="avatar-badge"><TeamLogo team={team} size={Math.max(14, Math.round(size * 0.46))} /></span>}
+    </span>
+  );
+}
+
 export function MiniPlayer({ player, extra }) {
   const url = assetUrl(player.thumbUrl || player.photoUrl);
   return (
