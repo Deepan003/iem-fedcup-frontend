@@ -131,10 +131,9 @@ export default function PlayersAdmin() {
     call('/admin/players').then(setPlayers).catch(() => setPlayers([]));
   }, [call]);
   useEffect(() => {
-    load();
     call('/admin/settings').then((s) => { setTiers(s.auction.tiers); setDefaultBase(s.auction.defaultBasePrice); }).catch(() => {});
     call('/admin/teams').then(setTeams).catch(() => {});
-  }, [call, load]);
+  }, [call, auction.state?.dataV]);
   // Live: refresh when players change anywhere (import, photos, sales, edits on another device).
   useEffect(() => { load(); }, [load, auction.state?.dataV, auction.state?.stats?.sold, auction.state?.stats?.unsold, auction.state?.stats?.retained]);
 

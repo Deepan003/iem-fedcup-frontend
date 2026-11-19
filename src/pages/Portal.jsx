@@ -64,6 +64,7 @@ export default function Portal() {
     if (!liveKey || !players) return;
     portalFetch('/players', code).then(setPlayers).catch(() => {});
     api('/teams').then(setTeams).catch(() => {});
+    api('/config').then((c) => setConfig((cur) => (JSON.stringify(cur) === JSON.stringify(c) ? cur : c))).catch(() => {});
   }, [liveKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const teamMap = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);

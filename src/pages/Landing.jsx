@@ -358,6 +358,7 @@ export default function Landing() {
   }, [statsKey, liveState?.status, liveState?.studio?.live]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!liveState?.dataV) return;
+    api('/config').then(setConfig).catch(() => {});
     api('/teams').then(setTeams).catch(() => {});
     fetch(`${API_URL}/api/players`).then((r) => (r.ok ? r.json() : [])).then(setPlayers).catch(() => {});
   }, [liveState?.dataV, liveState?.stats?.sold]); // eslint-disable-line react-hooks/exhaustive-deps

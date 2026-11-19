@@ -19,9 +19,10 @@ function CaptainLogin({ onLogin }) {
   const [teamId, setTeamId] = useState('');
   const [password, setPassword] = useState('');
   const [run, busy] = useAction();
+  const { state: live } = useAuction(); // live: new/renamed teams appear without a refresh
   useEffect(() => {
-    api('/teams').then(setTeams).catch(() => setTeams([]));
-  }, []);
+    api('/teams').then(setTeams).catch(() => setTeams((t) => t || []));
+  }, [live?.dataV]);
   const submit = (e) => {
     e.preventDefault();
     run(async () => {

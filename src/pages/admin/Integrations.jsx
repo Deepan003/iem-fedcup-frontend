@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback, useEffect, useRef, useState,
+} from 'react';
 import { API_URL } from '../../lib/api.js';
 import {
   Field, Spinner, useAction,
@@ -78,16 +80,23 @@ export default function Integrations() {
   const dataV = auction.state?.dataV;
   useEffect(() => { loadStatus(); }, [loadStatus, jobDoneAt, dataV]);
 
+  // Server values last shown in the forms: a live refresh only replaces a form you have not edited.
+  const shown = useRef({ sheet: null, r2: null });
   const load = useCallback(() => call('/admin/integrations').then((d) => {
     setInfo(d);
-    setSheet(d.sheet);
+    const adopt = (k, next, setter) => {
+      const prev = shown.current[k];
+      setter((cur) => (prev === null || JSON.stringify(cur) === prev ? next : cur));
+      shown.current[k] = JSON.stringify(next);
+    };
+    adopt('sheet', d.sheet, setSheet);
     if (d.r2.configured || d.r2.bucket) {
-      setR2({
+      adopt('r2', {
         accountId: d.r2.accountId || '', accessKeyId: d.r2.accessKeyId || '', secretAccessKey: d.r2.secretAccessKey || '', bucket: d.r2.bucket || '', publicUrl: d.r2.publicUrl || '',
-      });
+      }, setR2);
     }
   }), [call]);
-  useEffect(() => { load().catch(() => {}); }, [load]);
+  useEffect(() => { load().catch(() => {}); }, [load, dataV]);
 
   if (!info) return <Spinner />;
   const job = jobs.photos;

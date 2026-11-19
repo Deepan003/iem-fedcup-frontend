@@ -147,13 +147,15 @@ function Toggles({ title, section, value, items, onSave, extra }) {
 }
 
 export default function SettingsAdmin({ ChangePassword, onAuthChange }) {
-  const { call, token } = useAdmin();
+  const { call, token, auction } = useAdmin();
   const [s, setS] = useState(null);
   const [code, setCode] = useState('');
   const [run] = useAction();
+  // Live: reload when anything changes. Each form below is keyed by its own settings, so it
+  // only resets when those settings really changed (not on every sale or team edit).
   useEffect(() => {
     call('/admin/settings').then(setS).catch(() => {});
-  }, [call]);
+  }, [call, auction.state?.dataV]);
   if (!s) return <Spinner />;
   const save = (section, value) => run(async () => {
     const saved = await call(`/admin/settings/${section}`, { method: 'PUT', body: value });
@@ -164,9 +166,10 @@ export default function SettingsAdmin({ ChangePassword, onAuthChange }) {
     <>
       <h1>Rules & views</h1>
       <div className="cols-2">
-        <AuctionRules value={s.auction} onSave={save} />
+        <AuctionRules key={JSON.stringify(s.auction)} value={s.auction} onSave={save} />
         <div className="stack">
           <Toggles
+            key={JSON.stringify(s.captainView)}
             title="What captains can see"
             section="captainView"
             value={s.captainView}
@@ -183,6 +186,7 @@ export default function SettingsAdmin({ ChangePassword, onAuthChange }) {
             extra={(v, setV) => <NumField label="How many upcoming players" value={v.upcomingCount} onChange={(n) => setV({ ...v, upcomingCount: n })} />}
           />
           <Toggles
+            key={JSON.stringify(s.studio)}
             title="Studio (public screen)"
             section="studio"
             value={s.studio}
