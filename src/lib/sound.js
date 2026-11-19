@@ -89,6 +89,7 @@ class SoundEngine {
     this.crowdNode = null;
     this.listeners = new Set();
     this.suppressed = false; // another tab on this computer is the one playing
+    this.speechBlocked = false; // music allowed without a click, but the browser still blocks the voice
     if (typeof window !== 'undefined') setTimeout(() => this.initTabs(), 0);
   }
 
@@ -247,10 +248,25 @@ class SoundEngine {
         this.unlocked = true;
         this.applyLevels();
         this.emit();
+        this.probeSpeech();
       };
       if (this.ctx.state === 'running') ok();
       else this.ctx.resume().then(ok).catch(() => {}); // resolves straight away only when autoplay is allowed
     } catch { /* stays locked until a click */ }
+  }
+
+  /**
+   * Sound came on without a click (autoplay allowed): browsers like Chrome still block speech
+   * until the page is clicked. Find out, so the page can ask for that one click.
+   */
+  probeSpeech() {
+    if (!window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    u.onerror = (e) => {
+      if (e.error === 'not-allowed' && !this.speechBlocked) { this.speechBlocked = true; this.emit(); }
+    };
+    window.speechSynthesis.speak(u);
   }
 
   /** Must be called from a click/tap. Creates the audio context and wakes speech. */
@@ -263,6 +279,7 @@ class SoundEngine {
         u.volume = 0;
         window.speechSynthesis.speak(u);
       }
+      this.speechBlocked = false; // a click/tap: the voice is allowed from now on
       this.unlocked = true;
       this.applyLevels();
       this.emit();
@@ -1283,7 +1300,10 @@ class SoundEngine {
       this.nextLine();
     };
     u.onend = finish;
-    u.onerror = finish;
+    u.onerror = (e) => {
+      if (e?.error === 'not-allowed' && !this.speechBlocked) { this.speechBlocked = true; this.emit(); } // needs a click
+      finish();
+    };
     setTimeout(finish, 9000); // some browsers never fire onend
     this.speaking = true;
     this.updateMusicVolume();

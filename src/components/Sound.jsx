@@ -16,6 +16,7 @@ const say$ = (n, cur) => `${fmtAmount(n || 0)} ${CURRENCY_WORD[String(cur || '')
 const subscribe = (fn) => sound.onChange(fn);
 const isUnlocked = () => sound.unlocked;
 const isSuppressed = () => sound.suppressed;
+const isSpeechBlocked = () => sound.speechBlocked;
 
 /** Settings switch for this kind of screen (studio / captain / admin). */
 function surfaceAllowed(audio, surface) {
@@ -60,9 +61,11 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
     if (!unlocked && prefs.on && surfaceAllowed(audio, surface)) sound.tryAutoUnlock();
   }, [audioKey, prefs.on, surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // First tap/click anywhere unlocks sound (browsers block audio until a gesture).
+  // First tap/click anywhere unlocks sound (browsers block audio until a gesture) — and the voice,
+  // which Chrome keeps blocked even when music was allowed to start on its own.
+  const speechBlocked = useSyncExternalStore(subscribe, isSpeechBlocked);
   useEffect(() => {
-    if (unlocked || !prefs.on || !surfaceAllowed(audio, surface)) return undefined;
+    if ((unlocked && !speechBlocked) || !prefs.on || !surfaceAllowed(audio, surface)) return undefined;
     const go = () => { sound.unlock(); };
     window.addEventListener('pointerdown', go, { once: true });
     window.addEventListener('keydown', go, { once: true });
@@ -70,7 +73,7 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
       window.removeEventListener('pointerdown', go);
       window.removeEventListener('keydown', go);
     };
-  }, [unlocked, prefs.on, audioKey, surface]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [unlocked, speechBlocked, prefs.on, audioKey, surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // React to state changes.
   const prev = useRef(null);
@@ -302,6 +305,7 @@ export function SoundDock({
 }) {
   const { prefs, setPrefs, unlocked } = ctl;
   const elsewhere = useSyncExternalStore(subscribe, isSuppressed);
+  const voiceBlocked = useSyncExternalStore(subscribe, isSpeechBlocked);
   const [open, setOpen] = useState(false);
   const voices = useVoices();
   const ref = useRef(null);
@@ -325,6 +329,33 @@ export function SoundDock({
         <span className="snd-elsewhere" title="Only one tab on this computer plays sound, so voices and music never overlap. The studio tab has priority.">
           🔈 Playing in another tab
         </span>
+      </div>
+    );
+  }
+
+  // Music is playing but the browser blocks the announcer until one click on the page
+  if (unlocked && voiceBlocked && prefs.on && prefs.voice !== false && audio?.voice !== false && !elsewhere) {
+    if (gate) {
+      return (
+        <div className="snd-gate" role="dialog" aria-label="Turn on the announcer" onClick={() => sound.unlock()}>
+          <div className="snd-gate-card" onClick={(e) => e.stopPropagation()}>
+            <span className="snd-wave live big" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+            <h2>Turn on the announcer</h2>
+            <p>The music is on. Click once so the announcer can call the players, bids and sales out loud.</p>
+            <div className="snd-gate-actions">
+              <button type="button" className="btn primary" onClick={() => { sound.unlock(); document.documentElement.requestFullscreen?.().catch(() => {}); }}>🎙 Voice on + full screen</button>
+              <button type="button" className="btn" onClick={() => sound.unlock()}>🎙 Voice on</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className={`snd-dock ${inline ? 'inline' : ''}`} ref={ref}>
+        <button type="button" className="snd-unlock" onClick={() => sound.unlock()}>
+          <span className="snd-wave" aria-hidden="true"><i /><i /><i /></span>
+          Tap for the announcer
+        </button>
       </div>
     );
   }
