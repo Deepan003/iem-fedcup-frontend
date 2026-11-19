@@ -24,3 +24,4 @@
 .pool-card { box-sizing: border-box; }
 .pool { grid-template-columns: minmax(0, 1fr); justify-items: center; }
 .pool-card { min-width: 0; max-width: 100%; }
+.pool-name b { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.15; }

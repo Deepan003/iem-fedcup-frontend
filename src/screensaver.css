@@ -279,3 +279,9 @@
   .ss-step .ss-team { flex-wrap: wrap; justify-content: center; text-align: center; }
   .ss-step .ss-team .team-logo { width: 16px !important; height: 16px !important; }
 }
+
+/* full names: wrap onto a second line instead of being cut with "…" */
+.ss-nm { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.12; overflow-wrap: anywhere; }
+.ss-squad { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+.ss-squad li { align-items: center; }
+.ss-rinfo b, .ss-step b, .pos-ann b { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }

@@ -868,3 +868,9 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button { white-space: nowrap; flex: none; }
 @media (max-width: 600px) { .cap-progress { gap: 6px; } .cap-progress .label { font-size: 10px; } }
+
+/* full names everywhere a player is listed: wrap instead of "…" */
+.sale-row .ellipsis, .cs-row .ellipsis, .squad-list .ellipsis, .bench-row .ellipsis, .sb3-bname, .history-row .ellipsis, .result .nm {
+  white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.15;
+}
+.cs-row, .sale-row { align-items: center; }
