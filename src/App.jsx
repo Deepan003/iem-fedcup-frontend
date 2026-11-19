@@ -12,6 +12,7 @@ const Studio = lazy(() => import('./pages/Studio.jsx'));
 const Captain = lazy(() => import('./pages/Captain.jsx'));
 const Portal = lazy(() => import('./pages/Portal.jsx'));
 const AdminApp = lazy(() => import('./pages/admin/AdminApp.jsx'));
+const Shuffle = lazy(() => import('./pages/Shuffle.jsx')); // hidden admin page, not linked anywhere
 
 function NotFound() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/captain" element={<><Nav compact solid /><Captain /></>} />
             <Route path="/players" element={<><Nav /><Portal /></>} />
             <Route path="/admin/*" element={<AdminApp />} />
+            <Route path="/shuffle5" element={<Shuffle />} />
             <Route path="*" element={<><Nav /><NotFound /></>} />
           </Routes>
         </div>

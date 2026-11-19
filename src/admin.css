@@ -185,4 +185,4 @@ tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 .admin-main .ctl-global .ctl-actions .btn { min-height: 38px; padding: 6px 10px; font-size: 11px; line-height: 1.1; }
 /* make it obvious that the photo circle (captain and retained players) is clickable */
 .ret-photo { position: relative; cursor: pointer; }
-.ret-photo::after { content: '📷'; position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; display: grid; place-items: center; font-size: 11px; border-radius: 50%; background: var(--ink, #0b0b0c); border: 1px solid var(--rule-2); }
+.ret-photo::after { content: "📷"; position: absolute; right: 2px; bottom: 2px; width: 20px; height: 20px; display: grid; place-items: center; font-size: 11px; border-radius: 50%; background: var(--ink, #0b0b0c); border: 1px solid var(--rule-2); }
