@@ -154,3 +154,10 @@
 .ss-ctl { flex-wrap: wrap; }
 .ss-pick { max-width: 230px; min-height: 30px; padding: 3px 6px; background: var(--ink, #0b0b0c); color: var(--bone); border: 1px solid var(--rule-2); border-radius: 2px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
 @media (max-width: 600px) { .ss-pick { max-width: 100%; min-height: 36px; } }
+.tn-edit { padding: 2px 7px; min-height: 26px; opacity: 0.55; }
+tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
+.tn-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tn-form .input { min-width: 0; flex: 1 1 140px; padding: 6px 8px; }
+.tn-form .tn-short { flex: 0 0 72px; }
+@media (hover: none) { .tn-edit { opacity: 1; } }
+.ctl-teams th:not(:first-child), .ctl-teams td:not(:first-child) { white-space: nowrap; }

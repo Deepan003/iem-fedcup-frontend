@@ -4,15 +4,50 @@ import { money, teamById, POS_SHORT } from '../../lib/format.js';
 import LotStage from '../../components/LotStage.jsx';
 import { PurseStrip } from '../../components/Teams.jsx';
 import {
-  Field, Spinner, TeamLogo, useToast, MoneyInput,
+  Field, Spinner, TeamLogo, useToast, MoneyInput, useAction,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 import { SoundDock, useAuctionSound } from '../../components/Sound.jsx';
 import { screenChoices, screensaverActive } from '../../components/Screensaver.jsx';
 
-/** Quick switch: how many "Up next" players the studio and captains see (Off / 1 / 2 / 3 / 5). */
-/** Studio screensaver: show it now / stop it, and see when it is on automatically (e.g. paused). */
+/** Team name cell with a quick ✎ rename (name + short name), saved for every screen at once. */
+function TeamNameCell({ team }) {
+  const { call } = useAdmin();
+  const [run, busy] = useAction();
+  const [edit, setEdit] = useState(false);
+  const [name, setName] = useState(team.name);
+  const [short, setShort] = useState(team.shortName || '');
+  const open = () => { setName(team.name); setShort(team.shortName || ''); setEdit(true); };
+  const save = () => run(async () => {
+    await call(`/admin/teams/${team.id}`, { method: 'PUT', body: { name: name.trim(), shortName: short.trim() } });
+    setEdit(false);
+  }, 'Team name saved');
+  const keys = (e) => {
+    if (e.key === 'Enter' && name.trim()) save();
+    if (e.key === 'Escape') setEdit(false);
+  };
+  if (!edit) {
+    return (
+      <span className="row">
+        <TeamLogo team={team} size={24} />
+        <span className="ellipsis" title={team.name}>{team.shortName || team.name}</span>
+        {team.frozen && <span className="chip">frozen</span>}
+        <button type="button" className="btn sm ghost tn-edit" onClick={open} aria-label={`Rename ${team.name}`} title="Rename team">✎</button>
+      </span>
+    );
+  }
+  return (
+    <span className="tn-form">
+      {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+      <input className="input" autoFocus value={name} maxLength={60} onChange={(e) => setName(e.target.value)} onKeyDown={keys} aria-label="Team name" placeholder="Team name" />
+      <input className="input tn-short" value={short} maxLength={5} onChange={(e) => setShort(e.target.value.toUpperCase())} onKeyDown={keys} aria-label="Short name" placeholder="Short" />
+      <button type="button" className="btn sm primary" disabled={busy || !name.trim()} onClick={save}>Save</button>
+      <button type="button" className="btn sm ghost" onClick={() => setEdit(false)} aria-label="Cancel">✕</button>
+    </span>
+  );
+}
+
 /** Control-room picker: put the studio screensaver on, and choose exactly which screen it shows. */
 function ScreensaverControl() {
   const { call, auction } = useAdmin();
@@ -57,6 +92,7 @@ function ScreensaverControl() {
   );
 }
 
+/** Quick switch: how many "Up next" players the studio and captains see (Off / 1 / 2 / 3 / 5). */
 function UpNextControl() {
   const { call, auction } = useAdmin();
   const toast = useToast();
@@ -239,12 +275,12 @@ export default function Control() {
           <div className="card">
             <h2>Teams</h2>
             <div className="table-wrap" style={{ maxHeight: 'none' }}>
-              <table className="table">
+              <table className="table ctl-teams">
                 <thead><tr><th>Team</th><th>Players</th><th>Purse</th><th>Max bid</th></tr></thead>
                 <tbody>
                   {state.teams.map((t) => (
                     <tr key={t.id} style={{ outline: lot?.leaderId === t.id && open ? `2px solid ${t.color}` : undefined }}>
-                      <td><span className="row"><TeamLogo team={t} size={24} /><span className="ellipsis">{t.shortName || t.name}</span>{t.frozen && <span className="chip">frozen</span>}</span></td>
+                      <td><TeamNameCell key={`${t.name}|${t.shortName}`} team={t} /></td>
                       <td>{t.count}</td>
                       <td>{money(t.purse, state.currency)}</td>
                       <td>{money(t.maxBid, state.currency)}</td>
