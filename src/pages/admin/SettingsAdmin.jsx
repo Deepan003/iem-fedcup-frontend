@@ -8,6 +8,7 @@ import {
 import { useConfirm } from '../../components/Dialog.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import AudioSettings from './AudioSettings.jsx';
+import ScreensSettings from './ScreensSettings.jsx';
 
 const num = (v) => (v === '' || v == null ? '' : Number(v));
 
@@ -250,6 +251,8 @@ export default function SettingsAdmin({ ChangePassword, onAuthChange }) {
             )}
           />
           <AudioSettings key={JSON.stringify(s.audio)} value={s.audio} tracks={auction.state?.audio?.tracks} onSave={save} />
+          {/* forceOn is toggled from the Control room: keep it out of the key so it doesn't reset this form */}
+          <ScreensSettings key={JSON.stringify({ ...s.screens, forceOn: undefined })} value={s.screens} onSave={save} />
           <div className="card stack">
             <h2>Player portal</h2>
             <select className="input" value={s.portal.mode} onChange={(e) => save('portal', { mode: e.target.value })}>

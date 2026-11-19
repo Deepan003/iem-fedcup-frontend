@@ -144,3 +144,13 @@
 .ov-player { display: inline-flex; align-items: center; gap: 8px; padding: 5px 9px; border: 1px solid var(--rule-2); border-radius: 2px; font-size: 13px; }
 .ov-player b { font-weight: 600; }
 .team-card { scroll-margin-top: 16px; }
+.upnext-ctl.ss-on { color: var(--go); border-color: rgba(43, 213, 118, 0.5); }
+/* Screensaver settings */
+.ss-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.ss-item.off { opacity: 0.55; }
+.ss-item input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--signal); }
+.ss-custom-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 10px; align-items: end; }
+@media (max-width: 640px) { .ss-custom-row { grid-template-columns: 1fr; } }
+.ss-ctl { flex-wrap: wrap; }
+.ss-pick { max-width: 230px; min-height: 30px; padding: 3px 6px; background: var(--ink, #0b0b0c); color: var(--bone); border: 1px solid var(--rule-2); border-radius: 2px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+@media (max-width: 600px) { .ss-pick { max-width: 100%; min-height: 36px; } }

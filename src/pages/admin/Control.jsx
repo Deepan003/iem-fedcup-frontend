@@ -9,8 +9,54 @@ import {
 import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 import { SoundDock, useAuctionSound } from '../../components/Sound.jsx';
+import { screenChoices, screensaverActive } from '../../components/Screensaver.jsx';
 
 /** Quick switch: how many "Up next" players the studio and captains see (Off / 1 / 2 / 3 / 5). */
+/** Studio screensaver: show it now / stop it, and see when it is on automatically (e.g. paused). */
+/** Control-room picker: put the studio screensaver on, and choose exactly which screen it shows. */
+function ScreensaverControl() {
+  const { call, auction } = useAdmin();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const sc = auction.state?.screens;
+  const showing = screensaverActive(auction.state);
+  const choices = screenChoices(auction.state);
+  const save = async (patch, msg) => {
+    setBusy(true);
+    try {
+      const s = await call('/admin/settings');
+      await call('/admin/settings/screens', { method: 'PUT', body: { ...s.screens, enabled: true, ...patch } });
+      if (msg) toast(msg, 'ok');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const pick = (v) => {
+    const label = choices.find(([k]) => k === v)?.[1] || 'rotation';
+    // picking one screen puts it on the studio straight away; "rotate" just changes what shows
+    if (v) save({ show: v, forceOn: true }, `Studio now showing: ${label}`);
+    else save({ show: '' }, 'Screensaver will rotate the ticked screens');
+  };
+  return (
+    <span className={`chip upnext-ctl ss-ctl ${showing ? 'ss-on' : ''}`} title="Which screens rotate, and how long each shows, is set in Rules & views">
+      {showing ? (sc?.forceOn ? '● Screensaver on' : '● Screensaver (auto)') : 'Screensaver'}
+      <select className="ss-pick" value={sc?.show || ''} disabled={busy} onChange={(e) => pick(e.target.value)} aria-label="Screen to show on the studio">
+        {choices.map(([v, l]) => <option key={v || 'rotate'} value={v}>{l}</option>)}
+      </select>
+      <button
+        type="button"
+        disabled={busy}
+        className={sc?.forceOn ? 'on' : ''}
+        onClick={() => (sc?.forceOn ? save({ forceOn: false, show: '' }, 'Screensaver stopped') : save({ forceOn: true }, 'Screensaver is on the studio'))}
+      >
+        {sc?.forceOn ? 'Stop' : 'Show now'}
+      </button>
+    </span>
+  );
+}
+
 function UpNextControl() {
   const { call, auction } = useAdmin();
   const toast = useToast();
@@ -88,6 +134,7 @@ export default function Control() {
         <span className="chip">{state.stats.sold} sold · {state.stats.unsold} unsold · {state.stats.available} left</span>
         {viewers && <span className="chip">👁 {viewers.public} viewers · {viewers.captains} captains</span>}
         <UpNextControl />
+        <ScreensaverControl />
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>

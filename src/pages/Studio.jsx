@@ -8,6 +8,7 @@ import { MiniPlayer, Spinner, TeamLogo } from '../components/ui.jsx';
 import { BrandMark } from '../components/Nav.jsx';
 import TeamReveal from '../components/TeamReveal.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
+import Screensaver from '../components/Screensaver.jsx';
 
 function Clock() {
   const [t, setT] = useState(() => new Date());
@@ -110,6 +111,7 @@ export default function Studio() {
         </main>
       )}
       {state?.status === 'ended' && showReveal && <TeamReveal state={state} onClose={() => setShowReveal(false)} />}
+      <Screensaver state={state} />
       <SoldOverlay state={state} />
       <SoundDock state={state} sound={snd} surface="studio" big={screen} />
     </div>
