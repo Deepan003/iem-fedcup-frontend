@@ -161,3 +161,5 @@ tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 .tn-form .tn-short { flex: 0 0 72px; }
 @media (hover: none) { .tn-edit { opacity: 1; } }
 .ctl-teams th:not(:first-child), .ctl-teams td:not(:first-child) { white-space: nowrap; }
+.ss-auto { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); cursor: pointer; white-space: nowrap; }
+.ss-auto input { accent-color: var(--go, #2bd576); width: 16px; height: 16px; }

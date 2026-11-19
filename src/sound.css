@@ -41,3 +41,16 @@
   .snd-dock:not(.inline):not(.big) .snd-unlock { padding: 8px 12px; font-size: 10.5px; letter-spacing: 0.08em; }
   .snd-dock:not(.inline) .snd-btn { width: 42px; height: 42px; }
 }
+
+/* Studio: "Start the show" gate (browsers need one click before a page may play sound) */
+.snd-gate { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; background: rgba(5, 5, 6, 0.72); backdrop-filter: blur(6px); cursor: pointer; animation: snd-gate-in 0.4s ease both; }
+.snd-gate-card { display: flex; flex-direction: column; align-items: center; gap: 16px; max-width: 560px; padding: 36px 34px 26px; text-align: center; background: #0d0d0f; border: 1px solid rgba(255, 255, 255, 0.1); border-top: 4px solid var(--signal, #e3123f); border-radius: 4px; box-shadow: 0 40px 120px -30px rgba(227, 18, 63, 0.55); cursor: default; }
+.snd-gate-card h2 { margin: 0; font-family: var(--display); font-weight: 900; font-size: clamp(40px, 6vw, 72px); line-height: 0.9; text-transform: uppercase; }
+.snd-gate-card p { margin: 0; color: var(--bone-3, #aaa); font-size: 16px; line-height: 1.5; }
+.snd-gate-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 6px; }
+.snd-gate-actions .btn { font-size: 15px; padding: 14px 20px; }
+.snd-gate-skip { background: none; border: 0; color: var(--dim, #888); font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.snd-wave.big { height: 42px; gap: 6px; }
+.snd-wave.big i { width: 6px; }
+@keyframes snd-gate-in { from { opacity: 0; } }
+.snd-elsewhere { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: rgba(20, 20, 22, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--dim, #999); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }

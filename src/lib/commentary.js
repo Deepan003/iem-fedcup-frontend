@@ -138,6 +138,11 @@ const L = {
     () => "And we're back!", () => "We're back. Let's carry on!", () => "Break's over! Back to the bidding!",
     () => 'Welcome back! Where were we?', () => "Right, let's go again!",
   ],
+  soundCheck: [
+    () => 'Sound check! Can everyone hear me? One, two, three!',
+    () => 'Testing, testing! If you can hear this, the studio sound is working!',
+    () => "Sound check! Good evening, everyone. We're ready when you are!",
+  ],
   end: [
     () => 'And that is full time on the auction! Thank you all for watching!', () => "That's a wrap! Thank you, everyone, for an amazing auction!",
     () => 'The auction is complete! The squads are set. See you on the pitch!', () => "That's the final hammer! What a night. Thank you all!",

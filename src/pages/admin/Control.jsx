@@ -88,7 +88,31 @@ function ScreensaverControl() {
       >
         {sc?.forceOn ? 'Stop' : 'Show now'}
       </button>
+      <label className="ss-auto" title="Show the screensaver automatically while the auction is paused">
+        <input type="checkbox" checked={!!sc?.onPause} disabled={busy} onChange={(e) => save({ onPause: e.target.checked }, e.target.checked ? 'Screensaver will show whenever you pause' : 'Screensaver will no longer show on pause')} />
+        Auto on pause
+      </label>
     </span>
+  );
+}
+
+/** Plays a test chime + voice on every studio / public screen that has sound on. */
+function SoundCheckButton() {
+  const { call } = useAdmin();
+  const [run, busy] = useAction();
+  return (
+    <button
+      type="button"
+      className="chip upnext-ctl snd-check"
+      disabled={busy}
+      title="Every studio and public screen with sound on plays a chime and says 'Sound check'. If the projector stays silent, click once on the studio page."
+      onClick={() => run(async () => {
+        const s = await call('/admin/settings');
+        await call('/admin/settings/audio', { method: 'PUT', body: { ...s.audio, soundCheck: Date.now() } });
+      }, 'Sound check sent: listen to the studio')}
+    >
+      🔊 Sound check
+    </button>
   );
 }
 
@@ -171,6 +195,7 @@ export default function Control() {
         {viewers && <span className="chip">👁 {viewers.public} viewers · {viewers.captains} captains</span>}
         <UpNextControl />
         <ScreensaverControl />
+        <SoundCheckButton />
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>

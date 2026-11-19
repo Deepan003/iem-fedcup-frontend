@@ -115,7 +115,7 @@ export default function Studio() {
       {state?.status === 'ended' && showReveal && <TeamReveal state={state} onClose={() => setShowReveal(false)} />}
       <Screensaver state={state} />
       <SoldOverlay state={state} />
-      <SoundDock state={state} sound={snd} surface="studio" big={screen} />
+      <SoundDock state={state} sound={snd} surface="studio" big={screen} gate />
     </div>
   );
 }

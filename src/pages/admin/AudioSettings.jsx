@@ -10,7 +10,11 @@ const SLOTS = [
   ['bed', 'Background music', 'Loops quietly after the intro; dips while bidding and under the announcer.'],
   ['sold', 'Sold sting', 'Plays on every sale. Without it, a built-in stadium "sold" hit is used.'],
   ['end', 'Full-time music', 'Plays when the auction ends.'],
-  ['screens', 'Screensaver music', 'Loops while the studio screensaver is on. Without it, built-in calm music plays.'],
+  ['screens', 'Screensaver music (all)', 'Loops on every screensaver that has no track of its own below. Without uploads, built-in music that fits each screen plays.'],
+  ['screensRetained', 'Screensaver · retained players', 'Built-in: a proud anthem.'],
+  ['screensTop', 'Screensaver · top 3', 'Built-in: epic drums and strings.'],
+  ['screensReplay', 'Screensaver · bid replays', 'Built-in: tense and driving.'],
+  ['screensTeams', 'Screensaver · team sheets', 'Built-in: a lo-fi groove.'],
 ];
 /* Short effects: each replaces the built-in sound when uploaded (keep them 0.2–3 seconds). */
 const EFFECTS = [

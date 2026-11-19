@@ -15,6 +15,7 @@ const say$ = (n, cur) => `${fmtAmount(n || 0)} ${CURRENCY_WORD[String(cur || '')
 
 const subscribe = (fn) => sound.onChange(fn);
 const isUnlocked = () => sound.unlocked;
+const isSuppressed = () => sound.suppressed;
 
 /** Settings switch for this kind of screen (studio / captain / admin). */
 function surfaceAllowed(audio, surface) {
@@ -229,6 +230,18 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
     return () => clearInterval(iv);
   }, [lot?.endsAt, lot?.phase, lot?.seq, lot?.amount, state?.paused, unlocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // "Sound check" from the control room: every public screen with sound on answers out loud
+  const check = state?.audio?.soundCheck || 0;
+  const lastCheck = useRef(check);
+  useEffect(() => {
+    if (check === lastCheck.current) return;
+    lastCheck.current = check;
+    if (!unlocked || surface === 'admin' || Date.now() - check > 60000) return;
+    sound.shimmer();
+    sound.gavel(1);
+    sound.say(line('soundCheck'), 'urgent', 'excited');
+  }, [check, unlocked]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return { prefs, setPrefs, unlocked };
 }
 
@@ -276,9 +289,10 @@ function useVoices() {
 
 /** Floating speaker button + per-device sound panel. */
 export function SoundDock({
-  state, sound: ctl, surface, big = false, inline = false,
+  state, sound: ctl, surface, big = false, inline = false, gate = false,
 }) {
   const { prefs, setPrefs, unlocked } = ctl;
+  const elsewhere = useSyncExternalStore(subscribe, isSuppressed);
   const [open, setOpen] = useState(false);
   const voices = useVoices();
   const ref = useRef(null);
@@ -295,6 +309,38 @@ export function SoundDock({
   const set = (k) => (v) => setPrefs({ ...prefs, [k]: v });
   const on = prefs.on && unlocked;
   const auto = pickVoice(audio?.voiceGender, '', audio?.voiceAccent || 'auto')?.name;
+
+  if (elsewhere && unlocked && prefs.on) {
+    return (
+      <div className={`snd-dock ${inline ? 'inline' : ''}`} ref={ref}>
+        <span className="snd-elsewhere" title="Only one tab on this computer plays sound, so voices and music never overlap. The studio tab has priority.">
+          🔈 Playing in another tab
+        </span>
+      </div>
+    );
+  }
+
+  if (prefs.on && !unlocked && gate) {
+    // Studio: browsers only allow sound after one click on the page, so make that click impossible to miss
+    const start = (full) => {
+      sound.unlock();
+      if (full) document.documentElement.requestFullscreen?.().catch(() => {});
+    };
+    return (
+      <div className="snd-gate" role="dialog" aria-label="Start the show" onClick={() => start(false)}>
+        <div className="snd-gate-card" onClick={(e) => e.stopPropagation()}>
+          <span className="snd-wave live big" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+          <h2>Start the show</h2>
+          <p>Click once so this screen can play the sound, music and announcer for everyone in the room.</p>
+          <div className="snd-gate-actions">
+            <button type="button" className="btn primary" onClick={() => start(true)}>🔊 Sound on + full screen</button>
+            <button type="button" className="btn" onClick={() => start(false)}>🔊 Sound on</button>
+          </div>
+          <button type="button" className="snd-gate-skip" onClick={() => setPrefs({ ...prefs, on: false })}>Continue without sound</button>
+        </div>
+      </div>
+    );
+  }
 
   if (prefs.on && !unlocked) {
     return (

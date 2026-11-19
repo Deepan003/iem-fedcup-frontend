@@ -28,6 +28,10 @@ export function screensaverActive(state) {
   return false;
 }
 
+const MUSIC_THEME = {
+  retained: 'proud', top3: 'epic', story: 'tense', team: 'groove', teamsAll: 'groove', custom: 'calm',
+};
+
 const ALL_ITEMS = ['retained', 'top3', 'record', 'war', 'teams', 'teamsAll', 'custom'];
 // a group pick ("retained", "teams", "custom") shows every slide of that group
 const GROUP_PREFIX = { retained: 'r-', teams: 't-', custom: 'c-' };
@@ -350,11 +354,13 @@ export default function Screensaver({ state }) {
 
   // music and effects on the studio screensaver (Audio settings: "Screensaver sounds")
   const sfx = state?.audio?.screenSfx !== false;
-  useEffect(() => {
-    sound.screensMusic(!!(active && sfx));
-  }, [active, sfx]);
-  useEffect(() => () => sound.screensMusic(false), []);
   const curSlide = slides.find((x) => x.key === order[idx]);
+  // music that fits the screen: proud for retained players, epic for the top 3, tense for replays…
+  const theme = MUSIC_THEME[curSlide?.kind] || 'calm';
+  useEffect(() => {
+    sound.screensMusic(!!(active && sfx), theme);
+  }, [active, sfx, theme]);
+  useEffect(() => () => sound.screensMusic(false), []);
   useEffect(() => {
     if (!active || !sfx || !curSlide) return undefined;
     const timers = [];

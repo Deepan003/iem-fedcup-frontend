@@ -87,6 +87,8 @@ class SoundEngine {
     this.voiceGen = 0; // bumps on interrupt so stale onend events are ignored
     this.crowdNode = null;
     this.listeners = new Set();
+    this.suppressed = false; // another tab on this computer is the one playing
+    if (typeof window !== 'undefined') setTimeout(() => this.initTabs(), 0);
   }
 
   /* ---------- state ---------- */
@@ -107,13 +109,78 @@ class SoundEngine {
   }
 
   /** Effective switches: admin settings AND this device's preferences. */
-  get active() {
+  /* ---------- one tab plays ---------- */
+
+  /**
+   * Several tabs of the site on one computer (studio + control room + home page…) would all play
+   * the same voice and music on top of each other. Tabs talk over a BroadcastChannel and only the
+   * best one plays: the studio, then public pages, then captain, then the control room; the oldest tab breaks a tie.
+   */
+  initTabs() {
+    if (this.bc || typeof BroadcastChannel === 'undefined') return;
+    this.tabId = Math.random().toString(36).slice(2);
+    this.tabSince = Date.now();
+    this.peers = new Map();
+    this.bc = new BroadcastChannel('fedcup-sound');
+    this.bc.onmessage = (e) => {
+      const m = e.data;
+      if (!m || m.id === this.tabId) return;
+      if (m.bye) this.peers.delete(m.id);
+      else this.peers.set(m.id, { ...m, seen: Date.now() });
+      this.electTab();
+    };
+    const beat = () => {
+      try { this.bc.postMessage(this.tabInfo()); } catch { /* closed */ }
+      this.electTab();
+    };
+    this.tabTimer = setInterval(beat, 1500);
+    beat();
+    window.addEventListener('pagehide', () => { try { this.bc.postMessage({ id: this.tabId, bye: true }); } catch { /* closed */ } });
+  }
+
+  tabPriority() {
+    if (window.location.pathname.startsWith('/studio')) return 4;
+    if (this.surface === 'studio') return 3; // home page / portal during the live show
+    if (this.surface === 'captain') return 2;
+    return 1; // control room
+  }
+
+  tabInfo() {
+    return { id: this.tabId, since: this.tabSince, prio: this.tabPriority(), ready: this.rawActive };
+  }
+
+  electTab() {
+    if (!this.peers) return;
+    const now = Date.now();
+    for (const [id, p] of this.peers) if (now - p.seen > 4500) this.peers.delete(id);
+    const me = this.tabInfo();
+    const better = [...this.peers.values()].some((p) => p.ready && (p.prio > me.prio || (p.prio === me.prio && p.since < me.since)));
+    if (better === this.suppressed) return;
+    this.suppressed = better;
+    if (better) this.silenceAll();
+    this.applyLevels();
+    this.emit();
+  }
+
+  /** Stop everything this tab is playing (another tab took over). */
+  silenceAll() {
+    this.stopVoice();
+    for (const el of Object.values(this.music)) { clearInterval(el._fade); el.pause(); }
+    this.ambientStop();
+    this.screensEl = null;
+    if (this.crowdBus) this.crowdBus.gain.setTargetAtTime(0, this.t, 0.2);
+  }
+
+  /** Effective switches: admin settings AND this device's preferences (ignoring other tabs). */
+  get rawActive() {
     const s = this.settings;
     if (!this.unlocked || !s.enabled || !this.prefs.on) return false;
     if (this.surface === 'studio') return s.studioSound !== false;
     if (this.surface === 'captain') return s.captainSound !== false;
     return true;
   }
+
+  get active() { return !this.suppressed && this.rawActive; }
 
   get voiceOn() { return this.active && this.settings.voice !== false && this.prefs.voice; }
 
@@ -183,22 +250,20 @@ class SoundEngine {
   /** Screensaver already on when sound gets unlocked / music switched: start or stop its music to match. */
   refreshScreens() {
     if (!this.screensOn) return;
-    const el = this.music.screens;
-    const playing = !!this.amb || (el && !el.paused);
-    if (this.musicOn && !playing) {
-      this.screensOn = false;
-      this.screensMusic(true);
-    } else if (!this.musicOn && playing) {
-      this.ambientStop();
-      el?.pause();
-    }
+    const playing = this.screensPlaying();
+    if (this.musicOn && !playing) this.screensSwap(this.screensTheme || 'calm');
+    else if (!this.musicOn && playing) this.screensStopCurrent();
   }
 
   /* ---------- synth helpers ---------- */
 
   get t() { return this.ctx.currentTime; }
 
-  can() { return this.active && this.ctx; }
+  can() {
+    // the browser can suspend audio (device change, power saving): wake it back up
+    if (this.ctx?.state === 'suspended' && this.unlocked) this.ctx.resume().catch(() => {});
+    return this.active && this.ctx;
+  }
 
   env(gainNode, start, attack, peak, decay) {
     const g = gainNode.gain;
@@ -305,7 +370,7 @@ class SoundEngine {
   heat(level = 0) {
     if (!this.crowdBus || !this.crowdOn) return;
     this.heatLevel = clamp(level, 0, 1);
-    this.crowdBus.gain.setTargetAtTime((0.09 + this.heatLevel * 0.16) * this.level('sfx'), this.t, 0.4);
+    this.crowdBus.gain.setTargetAtTime(this.crowdLevel(), this.t, 0.4);
     if (this.crowdFilter) this.crowdFilter.frequency.setTargetAtTime(700 + this.heatLevel * 500, this.t, 0.5);
   }
 
@@ -595,7 +660,7 @@ class SoundEngine {
         lfo.start();
         this.crowdNode = { src, lfo };
       }
-      this.crowdBus.gain.setTargetAtTime((0.09 + (this.heatLevel || 0) * 0.16) * this.level('sfx'), this.t, 1.2);
+      this.crowdBus.gain.setTargetAtTime(this.crowdLevel(), this.t, 1.2);
     } else if (this.crowdNode) {
       this.crowdBus.gain.setTargetAtTime(0, this.t, 0.6);
     }
@@ -604,68 +669,198 @@ class SoundEngine {
   /* ---------- screensaver music ---------- */
 
   /**
-   * Music for the studio screensavers: the uploaded "screens" track, or a generated
-   * calm broadcast-style loop (pad chords, plucked arpeggio, soft pulse). The show music pauses meanwhile.
+   * Music for the studio screensavers, matched to what is on screen:
+   * proud (retained players), epic (top 3), tense (bid replays), groove (team sheets), calm (custom slides).
+   * Each mood uses its uploaded track if there is one, else the general "screens" upload, else a generated theme.
+   * Crossfades only when the mood changes; the show music pauses meanwhile.
    */
-  screensMusic(on) {
-    if (on === !!this.screensOn) return;
-    this.screensOn = on;
-    const el = this.music.screens;
-    const bedEl = this.music.bed;
-    if (on) {
-      if (bedEl && !bedEl.paused) { this.fade(bedEl, 0, 1); setTimeout(() => { if (this.screensOn) bedEl.pause(); }, 1100); }
-      if (!this.musicOn) return;
-      if (el) {
-        el.loop = true;
-        el.currentTime = 0;
-        el.volume = 0;
-        el.play().catch(() => {});
-        this.fade(el, this.musicTarget('screens'), 1.5);
-      } else if (this.ctx) {
-        this.ambientStart();
-      }
-    } else {
-      if (el && !el.paused) { this.fade(el, 0, 1.2); setTimeout(() => { if (!this.screensOn) el.pause(); }, 1300); }
-      this.ambientStop();
+  screensMusic(on, theme = 'calm') {
+    if (!on) {
+      if (!this.screensOn) return;
+      this.screensOn = false;
+      this.screensTheme = null;
+      this.screensStopCurrent();
       if (this.bedWanted) setTimeout(() => this.bed(true), 600);
+      return;
+    }
+    if (!this.screensOn) {
+      this.screensOn = true;
+      this.stop('intro', 1); // never under the intro
+      const bedEl = this.music.bed;
+      if (bedEl && !bedEl.paused) { this.fade(bedEl, 0, 1); setTimeout(() => { if (this.screensOn) bedEl.pause(); }, 1100); }
+    }
+    if (theme === this.screensTheme && this.screensPlaying()) return;
+    this.screensTheme = theme;
+    this.screensSwap(theme);
+  }
+
+  screensPlaying() {
+    return !!this.amb || !!(this.screensEl && !this.screensEl.paused);
+  }
+
+  screensStopCurrent() {
+    const el = this.screensEl;
+    if (el && !el.paused) { this.fade(el, 0, 1.2); setTimeout(() => { if (this.screensEl !== el || !this.screensOn) el.pause(); }, 1300); }
+    this.screensEl = null;
+    this.ambientStop();
+  }
+
+  screensSwap(theme) {
+    const SLOT = {
+      proud: 'screensRetained', epic: 'screensTop', tense: 'screensReplay', groove: 'screensTeams',
+    };
+    const el = this.music[SLOT[theme]] || this.music.screens || null;
+    if (el && el === this.screensEl && !el.paused) return; // same uploaded track covers this mood too: keep playing
+    this.screensStopCurrent();
+    if (!this.musicOn) return;
+    if (el) {
+      el.loop = true;
+      el.currentTime = 0;
+      el.volume = 0;
+      el.play().catch(() => {});
+      this.fade(el, this.musicTarget('screens'), 1.5);
+      this.screensEl = el;
+    } else if (this.ctx) {
+      this.ambientStart(theme);
     }
   }
 
-  ambientStart() {
+  /* drum kit for the generated themes (all routed to the music bus) */
+  kick(t, dest, peak = 0.55) {
+    this.osc('sine', 125, t, 0.3, peak, { to: 42, dest });
+    this.noise(t, 0.02, peak * 0.25, { type: 'highpass', freq: 3000, dest });
+  }
+
+  snare(t, dest, peak = 0.2) {
+    this.noise(t, 0.17, peak, { freq: 1900, q: 0.7, dest });
+    this.osc('triangle', 195, t, 0.08, peak * 0.6, { to: 150, dest });
+  }
+
+  hat(t, dest, peak = 0.05) {
+    this.noise(t, 0.035, peak, { type: 'highpass', freq: 7500, dest });
+  }
+
+  tom(t, f, dest, peak = 0.5) {
+    this.osc('sine', f, t, 0.5, peak, { to: f * 0.55, dest });
+    this.noise(t, 0.06, peak * 0.25, { type: 'lowpass', freq: 700, dest });
+  }
+
+  pad(midis, t, dur, dest, {
+    cut = 1200, peak = 0.045, attack = 0.8, type = 'sawtooth', oct = 0,
+  } = {}) {
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = cut;
+    lp.connect(dest);
+    midis.forEach((m) => {
+      const f = 440 * 2 ** ((m + oct - 69) / 12);
+      this.osc(type, f, t, dur, peak, { attack, dest: lp, detune: 7 });
+      this.osc(type, f, t, dur, peak, { attack, dest: lp, detune: -7 });
+    });
+  }
+
+  ambientStart(theme = 'calm') {
     if (this.amb) return;
+    const hz = (m) => 440 * 2 ** ((m - 69) / 12);
     const bus = this.ctx.createGain();
     bus.gain.value = 0;
     bus.connect(this.master);
     const verbSend = this.ctx.createGain();
-    verbSend.gain.value = 0.5;
+    verbSend.gain.value = theme === 'groove' ? 0.25 : 0.5;
     bus.connect(verbSend).connect(this.verbIn || this.master);
-    bus.gain.setTargetAtTime(this.musicTarget('screens') * 0.55, this.t, 1.5);
-    // i – VI – III – VII in A minor: cinematic and calm
-    const chords = [[220, 261.63, 329.63], [174.61, 220, 261.63], [261.63, 329.63, 392], [196, 246.94, 293.66]];
-    const bar = 4; // seconds
+    bus.gain.setTargetAtTime(this.musicTarget('screens') * 0.55, this.t, 1.2);
+
+    const THEMES = {
+      // calm: i – VI – III – VII in A minor, slow pads, plucked arpeggio, soft pulse
+      calm: {
+        bpm: 60,
+        chords: [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]],
+        bar: (t, ch, n, beat) => {
+          this.pad(ch, t, beat * 4, bus, { cut: 1100, peak: 0.05, attack: 1.2, oct: -12 });
+          this.osc('sine', hz(ch[0] - 24), t, beat * 4, 0.22, { attack: 0.3, dest: bus });
+          const arp = [...ch, ch[1] + 12, ch[2] + 12, ch[0] + 12];
+          for (let i = 0; i < 8; i += 1) this.osc('triangle', hz(arp[(i * 3 + n) % arp.length] + 12), t + i * beat / 2, 0.35, 0.05, { dest: bus });
+          for (let i = 0; i < 4; i += 1) this.osc('sine', 70, t + i * beat, 0.18, 0.18, { to: 45, dest: bus });
+        },
+      },
+      // proud (retained players): D major I – V – vi – IV, warm brass pad, marching drums, bell melody
+      proud: {
+        bpm: 96,
+        chords: [[62, 66, 69], [61, 64, 69], [62, 66, 71], [62, 67, 71]],
+        roots: [38, 33, 35, 31],
+        bar: (t, ch, n, beat, root) => {
+          this.pad(ch, t, beat * 4, bus, { cut: 1700, peak: 0.035, attack: 0.12, oct: -12 });
+          for (let i = 0; i < 8; i += 1) this.osc('triangle', hz(root), t + i * beat / 2, 0.22, i % 2 ? 0.08 : 0.13, { dest: bus });
+          [0, 2].forEach((b) => this.kick(t + b * beat, bus, 0.5));
+          [1, 3].forEach((b) => this.snare(t + b * beat, bus, 0.18));
+          for (let i = 0; i < 8; i += 1) this.hat(t + i * beat / 2, bus, i % 2 ? 0.03 : 0.05);
+          if (n % 4 === 3) [2.5, 3, 3.5].forEach((b) => this.snare(t + b * beat, bus, 0.12)); // fill
+          const tune = [[2, 1, 0, 1], [0, 1, 2, 2], [1, 2, 1, 0], [0, 0, 1, 2]][n % 4];
+          tune.forEach((k, i) => this.osc('sine', hz(ch[k] + 12), t + i * beat, beat * 0.9, 0.06, { attack: 0.01, dest: bus }));
+        },
+      },
+      // epic (top 3): C minor i – VI – III – VII, strings, choir, taiko drums, cymbal swells
+      epic: {
+        bpm: 80,
+        chords: [[60, 63, 67], [60, 63, 68], [58, 63, 67], [58, 62, 65]],
+        roots: [36, 32, 39, 34],
+        bar: (t, ch, n, beat, root) => {
+          this.pad(ch, t, beat * 4, bus, { cut: 1300, peak: 0.045, attack: 0.9, oct: -12 });
+          this.pad([ch[0] + 12, ch[2] + 12], t, beat * 4, bus, { cut: 2200, peak: 0.02, attack: 1.4, type: 'triangle' });
+          this.osc('sine', hz(root), t, beat * 4, 0.28, { attack: 0.2, dest: bus });
+          [[0, 95, 0.6], [1.5, 80, 0.4], [2, 95, 0.55], [3, 70, 0.45], [3.5, 70, 0.35]].forEach(([b, f, p]) => this.tom(t + b * beat, f, bus, p));
+          if (n % 4 === 3) this.noise(t + beat * 2, beat * 2, 0.12, { type: 'highpass', freq: 5000, attack: beat * 1.9, dest: bus });
+          if (n % 4 === 0) this.noise(t, 1.8, 0.14, { type: 'highpass', freq: 5200, dest: bus });
+        },
+      },
+      // tense (bid replays): E minor, driving 16th ostinato, four-on-the-floor, low drone
+      tense: {
+        bpm: 126,
+        chords: [[64, 67, 71], [64, 67, 72], [64, 69, 72], [63, 66, 71]],
+        roots: [40, 36, 33, 35],
+        bar: (t, ch, n, beat, root) => {
+          this.osc('sawtooth', hz(root - 12), t, beat * 4, 0.06, { attack: 0.05, dest: bus });
+          const lp = this.ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(800 + (n % 4) * 300, t);
+          lp.frequency.linearRampToValueAtTime(1600 + (n % 4) * 400, t + beat * 4);
+          lp.connect(bus);
+          const seq = [ch[0], ch[0] + 12, ch[1], ch[0] + 12, ch[2], ch[0] + 12, ch[1], ch[0] + 12];
+          for (let i = 0; i < 16; i += 1) this.osc('square', hz(seq[i % 8]), t + i * beat / 4, 0.09, 0.03, { dest: lp });
+          for (let i = 0; i < 4; i += 1) this.kick(t + i * beat, bus, 0.45);
+          for (let i = 0; i < 4; i += 1) this.hat(t + (i + 0.5) * beat, bus, 0.06);
+          if (n % 2 === 1) this.snare(t + 3.5 * beat, bus, 0.12);
+        },
+      },
+      // groove (team sheets / the table): lo-fi Dm7 – G7 – Cmaj7 – Am7, electric piano, lazy swing beat
+      groove: {
+        bpm: 86,
+        chords: [[62, 65, 69, 72], [59, 65, 67, 71], [60, 64, 67, 71], [57, 60, 64, 67]],
+        roots: [38, 43, 36, 45],
+        bar: (t, ch, n, beat, root) => {
+          [0, 2.5].forEach((b) => ch.forEach((m) => {
+            this.osc('sine', hz(m), t + b * beat, beat * 1.4, 0.035, { attack: 0.01, dest: bus });
+            this.osc('triangle', hz(m + 12), t + b * beat, beat * 0.5, 0.008, { attack: 0.005, dest: bus });
+          }));
+          [[0, 0.16], [1.75, 0.1], [2.5, 0.14]].forEach(([b, p]) => this.osc('triangle', hz(root - 12), t + b * beat, beat * 0.7, p, { dest: bus }));
+          [0, 2.25].forEach((b) => this.kick(t + b * beat, bus, 0.4));
+          [1, 3].forEach((b) => this.snare(t + b * beat, bus, 0.1));
+          for (let i = 0; i < 8; i += 1) this.hat(t + i * beat / 2 + (i % 2 ? beat * 0.08 : 0), bus, i % 2 ? 0.025 : 0.04);
+        },
+      },
+    };
+    const th = THEMES[theme] || THEMES.calm;
+    const beat = 60 / th.bpm;
+    const barSec = beat * 4;
     let n = 0;
     const play = () => {
-      if (!this.ctx || !this.amb) return;
-      const t = this.t + 0.05;
-      const ch = chords[n % chords.length];
-      const lp = this.ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 1100;
-      lp.connect(bus);
-      ch.forEach((f) => {
-        this.osc('sawtooth', f / 2, t, bar, 0.05, { attack: 1.2, dest: lp, detune: 7 });
-        this.osc('sawtooth', f / 2, t, bar, 0.05, { attack: 1.2, dest: lp, detune: -7 });
-      });
-      this.osc('sine', ch[0] / 4, t, bar, 0.22, { attack: 0.3, dest: bus }); // bass
-      const arp = [...ch, ch[1] * 2, ch[2] * 2, ch[0] * 2];
-      for (let i = 0; i < 8; i += 1) {
-        const f = arp[(i * 3 + n) % arp.length] * 2;
-        this.osc('triangle', f, t + i * (bar / 8), 0.35, 0.05, { dest: bus });
-      }
-      for (let i = 0; i < 4; i += 1) this.osc('sine', 70, t + i * (bar / 4), 0.18, 0.18, { to: 45, dest: bus }); // soft pulse
+      if (!this.ctx || !this.amb || this.amb.bus !== bus) return;
+      const i = n % th.chords.length;
+      const root = th.roots ? th.roots[i] : th.chords[i][0] - 24;
+      th.bar(this.t + 0.06, th.chords[i], n, beat, root);
       n += 1;
     };
-    this.amb = { bus, iv: setInterval(play, bar * 1000) };
+    this.amb = { bus, iv: setInterval(play, barSec * 1000), theme };
     play();
   }
 
@@ -674,14 +869,14 @@ class SoundEngine {
     const { bus, iv } = this.amb;
     this.amb = null;
     clearInterval(iv);
-    bus.gain.setTargetAtTime(0, this.t, 0.5);
-    setTimeout(() => bus.disconnect(), 3000);
+    bus.gain.setTargetAtTime(0, this.t, 0.45); // fades while the next theme fades in: a crossfade
+    setTimeout(() => bus.disconnect(), 3500);
   }
 
   /* ---------- music ---------- */
 
   syncTracks(tracks) {
-    for (const slot of ['intro', 'bed', 'sold', 'end', 'bid', 'newPlayer', 'hammer', 'record', 'unsold', 'screens']) {
+    for (const slot of ['intro', 'bed', 'sold', 'end', 'bid', 'newPlayer', 'hammer', 'record', 'unsold', 'screens', 'screensRetained', 'screensTop', 'screensReplay', 'screensTeams']) {
       const url = tracks[slot]?.url || '';
       if (this.trackUrls[slot] === url) continue;
       this.trackUrls[slot] = url;
@@ -691,7 +886,7 @@ class SoundEngine {
       el.src = url;
       el.preload = ['intro', 'end'].includes(slot) ? 'metadata' : 'auto';
       if (slot === 'intro') el.addEventListener('ended', () => this.introDone());
-      el.loop = slot === 'bed' || slot === 'screens';
+      el.loop = slot === 'bed' || slot.startsWith('screens');
       el.volume = 0;
       this.music[slot] = el;
     }
@@ -703,16 +898,23 @@ class SoundEngine {
   musicTarget(slot) {
     if (!this.musicOn) return 0;
     const base = this.level('music');
-    const duck = this.speaking ? 0.35 : 1;
+    const duck = this.speaking ? 0.22 : 1;
     return clamp(base * duck * (slot === 'bed' ? this.bedLevel : 1), 0, 1);
   }
 
   updateMusicVolume() {
     for (const [slot, el] of Object.entries(this.music)) {
       if (el.paused) continue;
-      this.fade(el, this.musicTarget(slot), 0.5);
+      this.fade(el, this.musicTarget(slot.startsWith('screens') ? 'screens' : slot), 0.35);
     }
     if (!this.musicOn) this.music.bed?.pause();
+    if (this.amb && this.ctx) this.amb.bus.gain.setTargetAtTime(this.musicTarget('screens') * 0.55, this.t, 0.15);
+    if (this.crowdNode && this.crowdOn) this.crowdBus.gain.setTargetAtTime(this.crowdLevel(), this.t, 0.25);
+  }
+
+  /** Crowd murmur level: rises with the heat, dips under the announcer. */
+  crowdLevel() {
+    return (0.09 + (this.heatLevel || 0) * 0.16) * this.level('sfx') * (this.speaking ? 0.45 : 1);
   }
 
   fade(el, to, seconds) {
@@ -730,6 +932,12 @@ class SoundEngine {
   play(slot) {
     const el = this.music[slot];
     if (!el || !this.musicOn) return false;
+    if (slot === 'intro' || slot === 'end') {
+      // a featured track: the background music and any screensaver music step aside
+      const bedEl = this.music.bed;
+      if (bedEl && !bedEl.paused) { this.fade(bedEl, 0, 0.8); setTimeout(() => bedEl.pause(), 900); }
+      if (this.screensEl || this.amb) this.screensStopCurrent();
+    }
     try {
       clearTimeout(el._stop);
       el.currentTime = 0;
@@ -865,6 +1073,7 @@ class SoundEngine {
     setTimeout(finish, 9000); // some browsers never fire onend
     this.speaking = true;
     this.updateMusicVolume();
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume(); // Chrome sometimes leaves speech stuck paused
     window.speechSynthesis.speak(u);
   }
 
