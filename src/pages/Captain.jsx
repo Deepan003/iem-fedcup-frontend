@@ -240,7 +240,10 @@ function CaptainRoom({ auth, onLogout }) {
       </div>
       <div className="row" style={{ justifyContent: 'space-between', marginTop: -14 }}>
         {connected ? <span className="tiny" style={{ color: 'var(--go)' }}>● Connected</span> : <span className="tiny" style={{ color: 'var(--amber)' }}>● Reconnecting</span>}
-        <button type="button" className="btn sm ghost" onClick={onLogout}>Sign out</button>
+        <span className="row" style={{ gap: 8 }}>
+          <SoundDock state={state} sound={snd} surface="captain" inline />
+          <button type="button" className="btn sm ghost" onClick={onLogout}>Sign out</button>
+        </span>
       </div>
 
       {lot && watched(lot.playerId) && ['reveal', 'bidding'].includes(lot.phase) && (
@@ -290,7 +293,6 @@ function CaptainRoom({ auth, onLogout }) {
       )}
       <div style={{ height: 30 }} />
       <SoldOverlay state={state} />
-      <SoundDock state={state} sound={snd} surface="captain" />
     </main>
   );
 }

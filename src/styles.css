@@ -644,3 +644,24 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
   .studio { gap: 30px; }
 }
 .pen-tag { display: inline-block; margin-top: 8px; padding: 2px 7px; border: 1px solid rgba(255, 90, 90, 0.45); border-radius: 2px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #ff9a9a; cursor: help; }
+
+/* Performance: the film grain re-blends the whole screen several times a second. Keep it for
+   desktop pointers only; phones/tablets (and reduced-motion users) skip it entirely. */
+@media (hover: none), (pointer: coarse), (max-width: 900px), (prefers-reduced-motion: reduce) {
+  .grain { display: none; }
+}
+
+/* ---------------- Mobile polish (phones) ---------------- */
+@media (max-width: 600px) {
+  /* Readable floor for the small monospace labels; slightly tighter tracking so they still fit. */
+  .label, .idx, .chip, .phase, .ind, .history-row .t, .tiny, .field > span { font-size: 11.5px; letter-spacing: 0.08em; }
+  /* iPhones zoom the whole page into any input under 16px. */
+  .input, select.input, textarea.input, input[type='text'], input[type='password'], input[type='search'], input[type='number'], select, textarea { font-size: 16px; }
+  .slot .nm { font-size: 10.5px; }
+  /* Player portal: keep the status stamp on the same line (half the row height). */
+  .result { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; }
+  .result .stamp { grid-column: 3; justify-self: end; font-size: 10px; letter-spacing: 0.06em; padding: 4px 6px; }
+  .result .nm { font-size: 22px; }
+}
+/* Scrolled nav: near-solid so big headings never show through behind the logo. */
+.nav.solid { background: rgba(11, 11, 12, 0.97); }

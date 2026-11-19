@@ -29,3 +29,15 @@
 
 @media (prefers-reduced-motion: reduce) { .snd-wave i, .snd-unlock { animation: none !important; } }
 @media print { .snd-dock { display: none; } }
+
+/* Inline placement (captain room header): sits in the row, panel drops down. */
+.snd-dock.inline { position: relative; right: auto; bottom: auto; z-index: 30; }
+.snd-dock.inline .snd-btn { width: 38px; height: 38px; }
+.snd-dock.inline .snd-panel { position: absolute; top: calc(100% + 8px); right: 0; }
+.snd-dock.inline .snd-unlock { padding: 8px 12px; font-size: 10.5px; box-shadow: none; }
+/* Phones: a smaller floating pill so it covers less of the page. */
+@media (max-width: 600px) {
+  .snd-dock:not(.inline) { right: 12px; bottom: calc(12px + var(--safe-b, 0px)); }
+  .snd-dock:not(.inline):not(.big) .snd-unlock { padding: 8px 12px; font-size: 10.5px; letter-spacing: 0.08em; }
+  .snd-dock:not(.inline) .snd-btn { width: 42px; height: 42px; }
+}

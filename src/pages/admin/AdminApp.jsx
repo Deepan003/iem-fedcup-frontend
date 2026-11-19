@@ -37,7 +37,7 @@ function Login({ onLogin }) {
           });
         }}
       >
-        <Link to="/" className="brand"><img className="brand-mark" src="/brand/crest.webp" alt="" />Fed Cup</Link>
+        <Link to="/" className="brand"><img className="brand-mark" src="/brand/crest-sm.webp" alt="" />Fed Cup</Link>
         <h1 className="display" style={{ fontSize: 44 }}>Control room</h1>
         <Field label="Admin password">
           <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus autoComplete="current-password" />
@@ -108,7 +108,7 @@ function Shell({ auth, onLogout, onAuthChange }) {
     <AdminCtx.Provider value={ctx}>
       <div className="admin-shell">
         <nav className="admin-side">
-          <Link to="/" className="brand" style={{ fontSize: 22, padding: '4px 10px 14px' }}><img className="brand-mark" src="/brand/crest.webp" alt="" />Fed Cup</Link>
+          <Link to="/" className="brand" style={{ fontSize: 22, padding: '4px 10px 14px' }}><img className="brand-mark" src="/brand/crest-sm.webp" alt="" />Fed Cup</Link>
           <NavLink to="/admin" end>🎙️ Control room</NavLink>
           <NavLink to="/admin/teams">🛡️ Teams</NavLink>
           <NavLink to="/admin/players">👟 Players</NavLink>

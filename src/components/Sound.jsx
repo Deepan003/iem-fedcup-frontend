@@ -198,7 +198,9 @@ function useVoices() {
 }
 
 /** Floating speaker button + per-device sound panel. */
-export function SoundDock({ state, sound: ctl, surface, big = false }) {
+export function SoundDock({
+  state, sound: ctl, surface, big = false, inline = false,
+}) {
   const { prefs, setPrefs, unlocked } = ctl;
   const [open, setOpen] = useState(false);
   const voices = useVoices();
@@ -219,7 +221,7 @@ export function SoundDock({ state, sound: ctl, surface, big = false }) {
 
   if (prefs.on && !unlocked) {
     return (
-      <div className={`snd-dock ${big ? 'big' : ''}`} ref={ref}>
+      <div className={`snd-dock ${big ? 'big' : ''} ${inline ? 'inline' : ''}`} ref={ref}>
         <button type="button" className="snd-unlock" onClick={() => sound.unlock()}>
           <span className="snd-wave" aria-hidden="true"><i /><i /><i /></span>
           {big ? 'Click to turn on sound' : 'Tap for sound'}
@@ -229,7 +231,7 @@ export function SoundDock({ state, sound: ctl, surface, big = false }) {
   }
 
   return (
-    <div className="snd-dock" ref={ref}>
+    <div className={`snd-dock ${inline ? 'inline' : ''}`} ref={ref}>
       {open && (
         <div className="snd-panel" role="dialog" aria-label="Sound settings">
           <div className="snd-row">

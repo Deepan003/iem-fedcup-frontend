@@ -27,3 +27,9 @@
 @keyframes rec-bar { 0% { transform: scaleX(0); } 22%, 78% { transform: scaleX(1); transform-origin: left; } 79% { transform-origin: right; } 100% { transform: scaleX(0); transform-origin: right; } }
 @keyframes rec-text { 0%, 18% { opacity: 0; transform: translateX(-30px); } 30%, 72% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(30px); } }
 @media (prefers-reduced-motion: reduce) { .price-block.heat-2::after { animation: none; } }
+/* Phones: the record banner stacks into two centred lines instead of running off-screen. */
+@media (max-width: 600px) {
+  .rec-bar { height: 128px; }
+  .rec-text { flex-direction: column; align-items: center; gap: 6px; padding: 0 16px; text-align: center; }
+  .rec-text b { font-size: clamp(28px, 9vw, 40px); }
+}

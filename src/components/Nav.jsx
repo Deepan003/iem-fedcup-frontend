@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 
 export function BrandMark({ className = 'brand-mark' }) {
-  return <img className={className} src="/brand/crest.webp" alt="" width="34" height="30" />;
+  return <img className={className} src="/brand/crest-sm.webp" alt="" width="34" height="30" />;
 }
 
 const LINKS = [

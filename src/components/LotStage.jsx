@@ -5,6 +5,7 @@ import {
 } from '../lib/format.js';
 import { PlayerCard, TeamLogo } from './ui.jsx';
 import { RollingNumber } from './fx.jsx';
+import { assetUrl } from '../lib/api.js';
 import Indicators, { heatClass } from './Indicators.jsx';
 
 /** Draining broadcast timer bar, synced to the server clock. */
@@ -105,6 +106,12 @@ const clock = (ms) => new Date(ms).toLocaleTimeString('en-GB', { hour12: false }
 /** The player on the block, broadcast style. */
 export default function LotStage({ state, now, showHistory = true, children }) {
   const lot = state?.lot;
+  // Warm the cache with the next players' full photos so each reveal is instant.
+  const nextPhotos = (state?.upcoming || []).slice(0, 2).map((p) => p.photoUrl).filter(Boolean).join('|');
+  useEffect(() => {
+    if (!nextPhotos) return;
+    nextPhotos.split('|').forEach((u) => { const img = new Image(); img.decoding = 'async'; img.src = assetUrl(u); });
+  }, [nextPhotos]);
   const leader = teamById(state, lot?.leaderId);
   const [hit, setHit] = useState(0);
   const prevAmount = useRef(lot?.amount);
