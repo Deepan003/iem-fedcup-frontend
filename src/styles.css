@@ -761,3 +761,4 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
 .pcard > img { filter: none; }
 .pcard::after { background: radial-gradient(130% 95% at 50% 42%, transparent 64%, rgba(8, 8, 9, 0.42) 100%); }
 .pcard:has(.pcard-bottom)::after { background: radial-gradient(130% 95% at 50% 42%, transparent 64%, rgba(8, 8, 9, 0.42) 100%), linear-gradient(180deg, transparent 62%, rgba(8, 8, 9, 0.78) 100%); }
+.meta-row .tier-pill { display: block; width: fit-content; }

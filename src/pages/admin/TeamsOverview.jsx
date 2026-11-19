@@ -67,7 +67,7 @@ export default function TeamsOverview({
     <div className="card stack" style={{ marginBottom: 14 }}>
       <div className="ret-head">
         <h2 style={{ margin: 0 }}>Overview</h2>
-        <span className="muted small">Edit team names here; use Edit ↓ for retained players, photos and penalties.</span>
+        <span className="muted small"><b>Rename a team:</b> type the new name or short name and press Save (or Enter). Use Edit ↓ for logo, captain photo, retained players and penalties.</span>
       </div>
       <div className="table-wrap">
         <table className="table ov-table">

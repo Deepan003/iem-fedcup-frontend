@@ -151,6 +151,8 @@ export default function TeamsAdmin() {
   return (
     <>
       <h1>Teams</h1>
+      {/* names first: rename any team right here (also: ✎ Rename in the Control room) */}
+      <TeamsOverview teams={teams} live={live} currency={auction.state?.currency} onSaved={load} />
       <form
         className="card"
         style={{ marginBottom: 14 }}
@@ -196,7 +198,6 @@ export default function TeamsAdmin() {
         </div>
         <button className="btn primary" style={{ marginTop: 14 }} disabled={busy || !form.name}>Add team</button>
       </form>
-      <TeamsOverview teams={teams} live={live} currency={auction.state?.currency} onSaved={load} />
       <div className="team-cols">
         {teams.map((t) => (
           <TeamEditor key={`${t.id}-${t.logoUrl}-${t.hasPassword}`} team={t} liveTeam={live[t.id]} players={players} currency={auction.state?.currency} onSaved={load} autoAdjust={autoAdjustId === t.id} onUploaded={setAutoAdjustId} onAdjustDone={() => setAutoAdjustId(null)} />

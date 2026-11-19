@@ -154,7 +154,7 @@
 .ss-ctl { flex-wrap: wrap; }
 .ss-pick { max-width: 230px; min-height: 30px; padding: 3px 6px; background: var(--ink, #0b0b0c); color: var(--bone); border: 1px solid var(--rule-2); border-radius: 2px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
 @media (max-width: 600px) { .ss-pick { max-width: 100%; min-height: 36px; } }
-.tn-edit { padding: 2px 7px; min-height: 26px; opacity: 0.55; }
+.tn-edit { padding: 2px 8px; min-height: 26px; opacity: 0.75; font-size: 10.5px; white-space: nowrap; }
 tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 .tn-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .tn-form .input { min-width: 0; flex: 1 1 140px; padding: 6px 8px; }
@@ -163,3 +163,26 @@ tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 .ctl-teams th:not(:first-child), .ctl-teams td:not(:first-child) { white-space: nowrap; }
 .ss-auto { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); cursor: pointer; white-space: nowrap; }
 .ss-auto input { accent-color: var(--go, #2bd576); width: 16px; height: 16px; }
+
+/* ---------- control room: compact, everything on one screen ---------- */
+.admin-main h1.ctl-h1 { font-size: clamp(26px, 2.6vw, 34px); margin-bottom: 10px; }
+.ctl-global { padding: 10px !important; }
+.ctl-global .ctl-actions { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+.ctl-global .ctl-actions .btn { min-height: 40px; padding: 6px 10px; font-size: 11.5px; }
+.status-bar .ap.compact { margin: 0; }
+/* the phase buttons (open / close bidding / sold …) sit on top of the lot and stay in reach while scrolling */
+.ctl-lot > .ctl-actions, .ctl-lot > form { order: -1; }
+.ctl-lot > .ctl-actions { position: sticky; top: 6px; z-index: 6; padding: 8px; margin: -4px -4px 4px; background: color-mix(in srgb, var(--ink-2, #121214) 94%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--rule); }
+.ctl-lot .big-confirm { min-height: 56px !important; font-size: 18px; }
+/* smaller lot display inside the control room */
+.ctl-lot .stage { grid-template-columns: minmax(120px, 190px) minmax(0, 1fr); gap: 16px; }
+.admin-main .ctl-lot h2.stage-name { font-size: clamp(26px, 3vw, 44px); }
+.ctl-lot .price { font-size: clamp(54px, 6vw, 92px); }
+.ctl-lot .history { max-height: 150px; }
+.ctl-lot .meta-row b { font-size: 13px; }
+.ctl-lot .meta-row .tier-pill { font-size: 14px; }
+.admin-main .ctl-global .ctl-actions { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+.admin-main .ctl-global .ctl-actions .btn { min-height: 38px; padding: 6px 10px; font-size: 11px; line-height: 1.1; }
+/* make it obvious that the photo circle (captain and retained players) is clickable */
+.ret-photo { position: relative; cursor: pointer; }
+.ret-photo::after { content: '📷'; position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; display: grid; place-items: center; font-size: 11px; border-radius: 50%; background: var(--ink, #0b0b0c); border: 1px solid var(--rule-2); }

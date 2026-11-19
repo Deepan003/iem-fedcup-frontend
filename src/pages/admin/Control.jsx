@@ -10,6 +10,7 @@ import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 import { SoundDock, useAuctionSound } from '../../components/Sound.jsx';
 import { screenChoices, screensaverActive } from '../../components/Screensaver.jsx';
+import { AuctionProgress } from '../../components/Live.jsx';
 
 /** Team name cell with a quick ✎ rename (name + short name), saved for every screen at once. */
 function TeamNameCell({ team }) {
@@ -33,7 +34,7 @@ function TeamNameCell({ team }) {
         <TeamLogo team={team} size={24} />
         <span className="ellipsis" title={team.name}>{team.shortName || team.name}</span>
         {team.frozen && <span className="chip">frozen</span>}
-        <button type="button" className="btn sm ghost tn-edit" onClick={open} aria-label={`Rename ${team.name}`} title="Rename team">✎</button>
+        <button type="button" className="btn sm ghost tn-edit" onClick={open} aria-label={`Rename ${team.name}`} title="Rename team">✎ Rename</button>
       </span>
     );
   }
@@ -185,26 +186,27 @@ export default function Control() {
 
   return (
     <>
-      <h1>Control room</h1>
+      <h1 className="ctl-h1">Control room</h1>
       <div className="status-bar">
         <span className="chip" style={{ color: connected ? '#86efac' : '#fca5a5' }}><span className="dot" />{connected ? 'Connected' : 'Disconnected'}</span>
         <span className="chip">Status: <b>{state.status}</b>{state.paused ? ' (paused)' : ''}</span>
         <span className="chip">Mode: <b>{state.mode}</b></span>
         <span className="chip">Round {state.round}</span>
-        <span className="chip">{state.stats.sold} sold · {state.stats.unsold} unsold · {state.stats.available} left</span>
+        <span className="chip">{state.stats.sold} sold · {state.stats.unsold} unsold</span>
+        <AuctionProgress state={state} compact />
         {viewers && <span className="chip">👁 {viewers.public} viewers · {viewers.captains} captains</span>}
         <UpNextControl />
         <ScreensaverControl />
         <SoundCheckButton />
       </div>
 
-      <div className="card" style={{ marginBottom: 14 }}>
+      <div className="card ctl-global" style={{ marginBottom: 14 }}>
         <div className="ctl-actions">
           {!live && <button type="button" className="btn ok" disabled={busy} onClick={() => act('start', {}, { ok: 'Auction is live' })}>▶ Start auction</button>}
           {live && !state.paused && <button type="button" className="btn" disabled={busy} onClick={() => act('pause')}>❚❚ Pause</button>}
           {live && state.paused && <button type="button" className="btn ok" disabled={busy} onClick={() => act('resume')}>▶ Resume</button>}
           <button type="button" className="btn" disabled={busy || phase === 'bidding'} onClick={() => act('setMode', { mode: state.mode === 'online' ? 'manual' : 'online' })}>
-            Switch to {state.mode === 'online' ? 'manual (offline) bidding' : 'online bidding'}
+            {state.mode === 'online' ? 'Go manual (room)' : 'Go online'}
           </button>
           <button type="button" className="btn" disabled={busy || open || !state.recentSales.length} onClick={() => act('undoLastSale', {}, { confirm: { title: 'Undo the last sale?', message: 'The player goes back into the pool and the team gets its money back.', tone: 'warning', confirmLabel: 'Undo sale' }, ok: 'Sale undone' })}>↶ Undo last sale</button>
           <button type="button" className="btn" disabled={busy || open || !state.stats.unsold} onClick={() => act('startUnsoldRound', {}, { confirm: { title: 'Start an unsold round?', message: 'All unsold players go back into the queue for another round.', confirmLabel: 'Start round' } })}>↻ Unsold round</button>
@@ -214,7 +216,7 @@ export default function Control() {
 
       <div className="cols-2">
         <div className="stack">
-          <div className="card stack">
+          <div className="card stack ctl-lot">
             <LotStage state={state} now={now} />
 
             {/* Phase-specific controls */}
