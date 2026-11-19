@@ -5,6 +5,7 @@ import { money, POSITIONS, POS_SHORT } from '../../lib/format.js';
 import {
   Field, MoneyInput, Spinner, TeamLogo, Toggle, useAction, logoTransform,
 } from '../../components/ui.jsx';
+import { assetUrl } from '../../lib/api.js';
 import { useAdmin } from './AdminApp.jsx';
 import RetainedEditor from './RetainedEditor.jsx';
 import LogoAdjust from './LogoAdjust.jsx';
@@ -74,6 +75,21 @@ function TeamEditor({
         <Field label="Short name"><input className="input" value={form.shortName} onChange={set('shortName')} maxLength={5} /></Field>
         <Field label="Colour"><input className="input" type="color" value={form.color} onChange={set('color')} style={{ padding: 4 }} /></Field>
         <Field label="Captain"><input className="input" value={form.captainName} onChange={set('captainName')} /></Field>
+        <Field label="Captain photo">
+          <label className="cap-photo" title="Upload the captain's photo (shown in the squad builder and team sheets)">
+            {team.captainPhotoUrl ? <img src={assetUrl(team.captainPhotoUrl)} alt="" /> : <span>+ Photo</span>}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files[0];
+                e.target.value = '';
+                if (f) run(async () => { await call(`/admin/teams/${team.id}/captain-photo`, { method: 'POST', form: upload(f) }); onSaved(); }, 'Captain photo saved');
+              }}
+            />
+          </label>
+        </Field>
         <Field label="Budget (empty = default)"><MoneyInput value={form.budget} onChange={set('budget')} /></Field>
       </div>
       <Toggle label="Freeze team" hint="A frozen team cannot bid (e.g. during a dispute)." checked={form.frozen} onChange={set('frozen')} />

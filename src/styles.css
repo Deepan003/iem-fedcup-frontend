@@ -762,3 +762,27 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
 .pcard::after { background: radial-gradient(130% 95% at 50% 42%, transparent 64%, rgba(8, 8, 9, 0.42) 100%); }
 .pcard:has(.pcard-bottom)::after { background: radial-gradient(130% 95% at 50% 42%, transparent 64%, rgba(8, 8, 9, 0.42) 100%), linear-gradient(180deg, transparent 62%, rgba(8, 8, 9, 0.78) 100%); }
 .meta-row .tier-pill { display: block; width: fit-content; }
+
+/* ---------- squad builder v2 ---------- */
+.sb-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sb-formation { display: flex; flex-direction: column; gap: 3px; }
+.sb-formation select { min-width: 150px; font-family: var(--mono); font-weight: 600; }
+.slot { width: 21%; }
+.slot .face { position: relative; overflow: visible; }
+.slot .face img { border-radius: inherit; }
+.slot .sp { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.08em; color: rgba(239, 235, 227, 0.6); }
+.slot.oop .face { border-color: var(--amber, #f59e0b); }
+.slot.oop .sp { color: var(--amber, #f59e0b); }
+.armband { position: absolute; right: -7px; top: -7px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: #f5c542; color: #1a1200; font-family: var(--display); font-weight: 900; font-size: 11px; box-shadow: 0 0 0 2px var(--ink); }
+.slot[draggable="true"] { cursor: grab; }
+.sb-bench { border: 1px dashed transparent; padding: 4px; transition: border-color 0.2s; }
+.sb-bench.drop { border-color: var(--signal); }
+.bench-row.sel { background: color-mix(in srgb, var(--signal) 14%, transparent); }
+@media print {
+  body.print-squad * { visibility: hidden !important; }
+  body.print-squad .squad-print, body.print-squad .squad-print * { visibility: visible !important; }
+  body.print-squad .squad-print { position: absolute; left: 0; top: 0; width: 100%; color: #000; }
+  body.print-squad .no-print-sb { display: none !important; }
+  body.print-squad .pitch { max-width: 520px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.print-squad .bench-row { color: #000; }
+}
