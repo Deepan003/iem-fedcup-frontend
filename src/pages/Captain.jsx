@@ -17,12 +17,16 @@ import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 /* --------------------------------- login --------------------------------- */
 function CaptainLogin({ onLogin }) {
   const [teams, setTeams] = useState(null);
-  const [teamId, setTeamId] = useState('');
+  // Links from the admin Links page carry ?team=<id>: preselect it so the captain only types the password.
+  const [teamId, setTeamId] = useState(() => new URLSearchParams(window.location.search).get('team') || '');
   const [password, setPassword] = useState('');
   const [run, busy] = useAction();
   const { state: live } = useAuction(); // live: new/renamed teams appear without a refresh
   useEffect(() => {
-    api('/teams').then(setTeams).catch(() => setTeams((t) => t || []));
+    api('/teams').then((list) => {
+      setTeams(list);
+      setTeamId((id) => (list.some((t) => t.id === id) ? id : '')); // ignore links to deleted teams
+    }).catch(() => setTeams((t) => t || []));
   }, [live?.dataV]);
   const submit = (e) => {
     e.preventDefault();

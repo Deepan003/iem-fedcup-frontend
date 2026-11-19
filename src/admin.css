@@ -120,3 +120,12 @@
 /* "Up next" quick buttons: big enough to tap. */
 .upnext-ctl button { min-width: 34px; min-height: 30px; padding: 4px 10px; font-size: 12px; }
 @media (max-width: 600px) { .upnext-ctl button { min-width: 40px; min-height: 36px; } }
+/* Links page */
+.link-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.link-row:last-child { border-bottom: 0; }
+.link-row b { font-weight: 600; }
+.link-url { display: block; margin-top: 3px; font-family: var(--mono); font-size: 12px; color: var(--bone-3); text-decoration: none; }
+.link-url:hover { color: var(--bone); text-decoration: underline; }
+.link-row.warn .link-url { color: #fca5a5; }
+.link-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 600px) { .link-row { flex-wrap: wrap; } .link-actions { width: 100%; justify-content: flex-start; padding-left: 48px; } }
