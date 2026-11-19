@@ -136,3 +136,11 @@
 .ret-adjust.inline { position: static; margin-top: 4px; }
 .ret-pick { display: inline-flex; align-items: center; gap: 8px; }
 .ret-pick img { width: 48px; height: 60px; object-fit: cover; border-radius: 2px; border: 1px solid var(--rule-2); }
+/* Teams overview */
+.ov-table td { vertical-align: middle; }
+.ov-name { min-width: 160px; }
+.ov-short { width: 76px; text-transform: uppercase; }
+.ov-players { display: flex; flex-wrap: wrap; gap: 6px; min-width: 260px; }
+.ov-player { display: inline-flex; align-items: center; gap: 8px; padding: 5px 9px; border: 1px solid var(--rule-2); border-radius: 2px; font-size: 13px; }
+.ov-player b { font-weight: 600; }
+.team-card { scroll-margin-top: 16px; }

@@ -9,6 +9,7 @@ import { useAdmin } from './AdminApp.jsx';
 import RetainedEditor from './RetainedEditor.jsx';
 import LogoAdjust from './LogoAdjust.jsx';
 import PenaltyEditor from './PenaltyEditor.jsx';
+import TeamsOverview from './TeamsOverview.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 
 const blankTeam = {
@@ -49,7 +50,7 @@ function TeamEditor({
   const pool = players.filter((p) => ['available', 'unsold', 'withheld'].includes(p.status));
 
   return (
-    <div className="card stack" style={{ borderColor: form.color }}>
+    <div id={`team-${team.id}`} className="card stack team-card" style={{ borderColor: form.color }}>
       {adjusting && (
         <LogoAdjust
           team={team}
@@ -195,6 +196,7 @@ export default function TeamsAdmin() {
         </div>
         <button className="btn primary" style={{ marginTop: 14 }} disabled={busy || !form.name}>Add team</button>
       </form>
+      <TeamsOverview teams={teams} live={live} currency={auction.state?.currency} onSaved={load} />
       <div className="team-cols">
         {teams.map((t) => (
           <TeamEditor key={`${t.id}-${t.logoUrl}-${t.hasPassword}`} team={t} liveTeam={live[t.id]} players={players} currency={auction.state?.currency} onSaved={load} autoAdjust={autoAdjustId === t.id} onUploaded={setAutoAdjustId} onAdjustDone={() => setAutoAdjustId(null)} />
