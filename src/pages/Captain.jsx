@@ -294,6 +294,25 @@ function CaptainRoom({ auth, onLogout }) {
     }, 600);
   }, [auth.token, toast]);
 
+  // When the price moves, hold the button for a beat (so nobody taps a price they haven't seen)
+  const nextAmt = state?.lot?.nextAmount;
+  const [bumped, setBumped] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const firstAmt = useRef(true);
+  useEffect(() => {
+    if (firstAmt.current) { firstAmt.current = false; return undefined; }
+    if (nextAmt == null) return undefined;
+    setBumped(true);
+    const t = setTimeout(() => setBumped(false), 450);
+    return () => clearTimeout(t);
+  }, [nextAmt]);
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(null), 2800);
+    return () => clearTimeout(t);
+  }, [notice]);
+  useEffect(() => { setNotice(null); }, [state?.lot?.seq]);
+
   if (!state) return <div className="auth-wrap"><Spinner /></div>;
 
   const me = teamById(state, auth.team.id);
@@ -320,24 +339,6 @@ function CaptainRoom({ auth, onLogout }) {
   else if (lot.nextAmount > (state.me?.maxBidForLot ?? 0)) reason = `Max you can bid: ${money(state.me?.maxBidForLot, state.currency)}`;
   const leading = lot?.leaderId === auth.team.id && ['bidding', 'awaiting'].includes(lot?.phase);
 
-  // When the price moves, hold the button for a beat (so nobody taps a price they haven't seen)
-  const nextAmt = lot?.nextAmount;
-  const [bumped, setBumped] = useState(false);
-  const [notice, setNotice] = useState(null);
-  const firstAmt = useRef(true);
-  useEffect(() => {
-    if (firstAmt.current) { firstAmt.current = false; return undefined; }
-    if (nextAmt == null) return undefined;
-    setBumped(true);
-    const t = setTimeout(() => setBumped(false), 450);
-    return () => clearTimeout(t);
-  }, [nextAmt]);
-  useEffect(() => {
-    if (!notice) return undefined;
-    const t = setTimeout(() => setNotice(null), 2800);
-    return () => clearTimeout(t);
-  }, [notice]);
-  useEffect(() => { setNotice(null); }, [lot?.seq]);
 
   const placeBid = async () => {
     if (!lot || pending || bumped) return;
