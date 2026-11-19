@@ -145,7 +145,13 @@ export default function Integrations() {
 
         <div className="card stack">
           <h2>3 · Cloudflare R2 (optional)</h2>
-          <p className="muted small" style={{ margin: 0 }}>Not needed: photos are already stored in your database. Only fill this in if you set up R2 later.</p>
+          <p className="muted small" style={{ margin: 0 }}>
+            {info.r2?.configured && info.r2.source === 'environment'
+              ? 'Already set up from the server settings. Nothing to do here: photos are saved to R2. (Saving here would override the server settings.)'
+              : info.storageMode === 'r2'
+                ? 'Connected: photos are saved to R2.'
+                : 'Not needed: photos are already stored in your database. Only fill this in if you set up R2 later.'}
+          </p>
           <p className="small" style={{ margin: 0 }}>Currently storing images in: <b>{info.storageMode === 'r2' ? 'Cloudflare R2' : 'the database (fallback)'}</b></p>
           <div className="form-grid">
             <Field label="Account ID"><input className="input" value={r2.accountId} onChange={(e) => setR2({ ...r2, accountId: e.target.value })} /></Field>
