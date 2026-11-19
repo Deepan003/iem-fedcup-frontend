@@ -186,3 +186,12 @@ tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 /* make it obvious that the photo circle (captain and retained players) is clickable */
 .ret-photo { position: relative; cursor: pointer; }
 .ret-photo::after { content: "📷"; position: absolute; right: 2px; bottom: 2px; width: 20px; height: 20px; display: grid; place-items: center; font-size: 11px; border-radius: 50%; background: var(--ink, #0b0b0c); border: 1px solid var(--rule-2); }
+
+/* report downloads */
+.dl-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--rule); }
+.rp-list { margin-bottom: 24px; }
+.rp-list h1 { margin: 0 0 4px; }
+@media print {
+  body.print-list .report > *:not(.rp-list) { display: none !important; }
+  body.print-list .rp-list { margin: 0; }
+}

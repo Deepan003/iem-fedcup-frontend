@@ -1,10 +1,97 @@
+import { useEffect, useState } from 'react';
+import { API_URL } from '../../lib/api.js';
 import { money } from '../../lib/format.js';
-import { Spinner, TeamLogo } from '../../components/ui.jsx';
+import { Spinner, TeamLogo, useToast } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+
+const LISTS = [
+  ['bids', 'Bid history', 'Every bid, lot by lot, with team, amount and time.'],
+  ['sold-main', 'Sold in the auction', 'Players bought in the main auction.'],
+  ['sold-unsold', 'Sold from the unsold round', 'Players who went unsold first and were bought later.'],
+  ['unsold', 'Unsold players', 'Players still unsold.'],
+];
+
+/** Download any list as Excel, or print it as a PDF (browser "Save as PDF"). */
+function ReportDownloads({ onPrint }) {
+  const { token, call } = useAdmin();
+  const toast = useToast();
+  const [busy, setBusy] = useState('');
+  const excel = async (kind) => {
+    setBusy(kind);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/report/${kind}?format=xlsx`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Download failed');
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fedcup-${kind}.xlsx`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setBusy('');
+    }
+  };
+  const pdf = async (kind) => {
+    setBusy(kind);
+    try {
+      onPrint(await call(`/admin/report/${kind}`));
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setBusy('');
+    }
+  };
+  return (
+    <div className="card stack no-print" style={{ marginBottom: 18 }}>
+      <h2 style={{ margin: 0 }}>Downloads</h2>
+      {LISTS.map(([kind, title, hint]) => (
+        <div key={kind} className="dl-row">
+          <div className="grow"><b>{title}</b><div className="muted small">{hint}</div></div>
+          <button type="button" className="btn sm" disabled={!!busy} onClick={() => pdf(kind)}>PDF</button>
+          <button type="button" className="btn sm" disabled={!!busy} onClick={() => excel(kind)}>{busy === kind ? '…' : 'Excel'}</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A single list laid out for printing; only this prints while it is open. */
+function PrintList({ data, onDone }) {
+  useEffect(() => {
+    document.body.classList.add('print-list');
+    const done = () => onDone();
+    window.addEventListener('afterprint', done);
+    const t = setTimeout(() => window.print(), 250);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('afterprint', done);
+      document.body.classList.remove('print-list');
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <section className="rp-list">
+      <div className="no-print" style={{ marginBottom: 12 }}><button type="button" className="btn sm" onClick={onDone}>✕ Close</button></div>
+      <h1>{data.title}</h1>
+      <p>IEM Federation Cup · Season 5 · {new Date().toLocaleString()} · {data.rows.length} rows</p>
+      <table className="rp-table">
+        <thead><tr>{data.columns.map(([k, h]) => <th key={k}>{h}</th>)}</tr></thead>
+        <tbody>
+          {data.rows.map((r, i) => (
+            // eslint-disable-next-line react/no-array-index-key
+            <tr key={i}>{data.columns.map(([k]) => <td key={k}>{r[k] ?? ''}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
 
 /** Print-ready auction report. "Save as PDF" uses the browser's print dialog (no extra download). */
 export default function Report() {
   const { auction } = useAdmin();
+  const [printing, setPrinting] = useState(null);
   const s = auction.state;
   if (!s) return <Spinner />;
   const cur = s.currency;
@@ -16,6 +103,8 @@ export default function Report() {
 
   return (
     <div className="report">
+      <ReportDownloads onPrint={setPrinting} />
+      {printing && <PrintList data={printing} onDone={() => setPrinting(null)} />}
       <div className="report-tools no-print">
         <button type="button" className="btn primary lg" onClick={() => window.print()}>⬇ Save as PDF</button>
         <span className="muted small">In the print dialog choose "Save as PDF". Each team starts on a new page.</span>
