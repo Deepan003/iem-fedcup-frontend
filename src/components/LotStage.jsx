@@ -54,6 +54,10 @@ export function SoldOverlay({ state }) {
     const t = setTimeout(() => setShow(null), 4200);
     return () => clearTimeout(t);
   }, [show]);
+  // The next player is on the block: never leave the previous sale covering it.
+  useEffect(() => {
+    if (show && lot && lot.seq !== show.seq) setShow(null);
+  }, [lot?.seq]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!show) return null;
   const c = show.team?.color || '#2bd576';
@@ -63,17 +67,18 @@ export function SoldOverlay({ state }) {
       <span className="slab s1" />
       <span className="slab s2" />
       <span className="slab s3" />
-      <div className="kinetic k1">{run}{run}</div>
-      <div className="kinetic k2">{run}{run}</div>
+      <div className="kinetic k1" aria-hidden="true">{run}{run}</div>
+      <div className="kinetic k2" aria-hidden="true">{run}{run}</div>
       <div className="center">
-        <div>
+        <div className="sold-stack">
           <div className="word"><span>Sold</span></div>
-          <div className="who">
+          <div className="sold-plate">
             <TeamLogo team={show.team} size={64} />
-            <div style={{ textAlign: 'left' }}>
-              <b style={{ display: 'block' }}>{show.name}</b>
-              <span className="label" style={{ color: 'inherit', opacity: 0.85 }}>{show.team?.name} · {money(show.amount, state.currency)}</span>
+            <div className="sold-plate-text">
+              <b>{show.name}</b>
+              <span>{show.team?.name}</span>
             </div>
+            <div className="sold-plate-price">{money(show.amount, state.currency)}</div>
           </div>
         </div>
       </div>

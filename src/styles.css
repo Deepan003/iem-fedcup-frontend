@@ -671,3 +671,23 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
 .sq-tally span.on { color: var(--bone); border-color: color-mix(in srgb, var(--c) 55%, var(--rule-2)); }
 .sq-tally b { font-weight: 600; }
 .sq-tally .sq-total { margin-left: auto; border: 0; padding: 0; text-transform: uppercase; }
+
+/* ---------------- SOLD overlay v2: always readable, never overlapping ---------------- */
+.sold-fx .kinetic { font-size: 19vh; opacity: 0.55; }
+.sold-fx .k1 { top: -3vh; -webkit-text-stroke: 2px rgba(255, 255, 255, 0.28); }
+.sold-fx .k2 { top: auto; bottom: -5vh; -webkit-text-stroke: 2px rgba(255, 255, 255, 0.2); }
+.sold-fx .center { color: #fff; padding: 22vh 20px 18vh; }
+.sold-stack { display: flex; flex-direction: column; align-items: center; gap: 2.4vh; max-width: 100%; }
+/* White word with a soft shadow reads on any team colour AND on the black band; sized to fit width and height. */
+.sold-fx .word { color: #fff; font-size: clamp(88px, min(24vw, 34vh), 320px); line-height: 0.86; padding: 0.04em 0.06em 0.02em; text-shadow: 0 0.05em 0 rgba(0, 0, 0, 0.3); }
+.sold-plate { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; max-width: min(92vw, 1000px); padding: 14px 24px 14px 14px; text-align: left; background: rgba(9, 9, 10, 0.94); border-left: 6px solid var(--c); border-radius: 2px; box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.8); opacity: 0; animation: fade-up 0.7s 0.75s var(--ease) forwards; }
+.sold-plate .team-logo { animation: pop 0.6s 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.sold-plate-text { min-width: 0; }
+.sold-plate-text b { display: block; font-family: var(--display); font-weight: 900; font-size: clamp(26px, 4.2vw, 58px); line-height: 0.9; text-transform: uppercase; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sold-plate-text span { display: block; margin-top: 6px; font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: color-mix(in srgb, var(--c) 55%, #fff); }
+.sold-plate-price { padding-left: 20px; border-left: 1px solid rgba(255, 255, 255, 0.14); font-family: var(--display); font-weight: 900; font-size: clamp(30px, 4.6vw, 64px); line-height: 0.9; white-space: nowrap; background: var(--grad-gold); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (max-width: 600px) {
+  .sold-fx .center { padding: 16vh 14px; }
+  .sold-plate { grid-template-columns: auto minmax(0, 1fr); padding: 12px 16px 12px 12px; gap: 12px; }
+  .sold-plate-price { grid-column: 1 / -1; padding: 8px 0 0; border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.14); }
+}

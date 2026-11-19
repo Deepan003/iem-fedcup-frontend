@@ -30,16 +30,27 @@ export default function Indicators({ state, now }) {
   const recTier = tier ? records?.byTier?.[tier] : null;
   const cur = state?.currency;
 
+  // Fire once per lot, only when a NEW bid beats the record while we watch (not on page load).
+  const seenAmount = useRef(undefined);
   useEffect(() => {
-    if (!live || !recAll || lot.amount == null) return undefined;
+    const first = seenAmount.current === undefined;
+    seenAmount.current = lot?.amount ?? null;
+    if (first || !live || !recAll || lot.amount == null) return;
     if (lot.amount > recAll.price && stungSeq.current !== lot.seq) {
       stungSeq.current = lot.seq;
-      setSting({ amount: lot.amount });
-      const t = setTimeout(() => setSting(null), 2600);
-      return () => clearTimeout(t);
+      setSting({ amount: lot.amount, seq: lot.seq, at: Date.now() });
     }
-    return undefined;
   }, [lot?.amount, lot?.seq, live]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hide on its own timer (new bids must not cancel it), and at once when the next player comes up.
+  useEffect(() => {
+    if (!sting) return undefined;
+    const t = setTimeout(() => setSting(null), 2600);
+    return () => clearTimeout(t);
+  }, [sting]);
+  useEffect(() => {
+    if (sting && lot?.seq !== sting.seq) setSting(null);
+  }, [lot?.seq]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!lot || !['bidding', 'awaiting', 'sold'].includes(lot.phase)) return null;
 
