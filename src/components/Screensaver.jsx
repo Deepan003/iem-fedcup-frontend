@@ -197,7 +197,7 @@ function StorySlide({
     if (!sfx || n === 0) return;
     if (n < steps.length) sound.bid(1 + (n / steps.length) * 3, n / steps.length > 0.6 ? 0.5 : 0.15);
     else {
-      sound.gavel(1);
+      sound.gavel(1, 1.3);
       sound.soldSting(true);
       sound.cheer(false);
     }

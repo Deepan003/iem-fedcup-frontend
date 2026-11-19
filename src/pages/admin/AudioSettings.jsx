@@ -104,6 +104,7 @@ export default function AudioSettings({ value, tracks = {}, onSave }) {
         <button type="button" className="btn sm" onClick={() => previewVoice(v, 'Next up: Arjun Sen. Midfielder, Gold tier. Base price, 50 points.')}>▶ Preview "Next up"</button>
         <button type="button" className="btn sm" onClick={() => previewVoice(v, 'Sold! Arjun Sen, to Radical Reds, for 300 points!')}>▶ Preview "Sold"</button>
         <button type="button" className="btn sm" onClick={() => previewMoment(v, 'war')}>▶ Fast bidding</button>
+        <button type="button" className="btn sm" onClick={() => previewMoment(v, 'hammer')}>▶ Hammer</button>
         <button type="button" className="btn sm" onClick={() => previewMoment(v, 'sold')}>▶ Full sold moment</button>
       </div>
       <p className="muted small" style={{ margin: 0 }}>The voice comes from each device's browser, so it can sound slightly different on the projector laptop and on phones. Viewers can pick another voice from the speaker button. For the most natural Indian voices (Prabhat, Neerja) run the studio in Microsoft Edge.</p>

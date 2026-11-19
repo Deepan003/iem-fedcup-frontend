@@ -93,7 +93,7 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
       sound.say(line('welcome', { title }), 'urgent', 'hype');
     }
     if (p.status === 'live' && s.status === 'ended') {
-      sound.gavel(3);
+      sound.gavel(3, 1.4);
       sound.cheer(true);
       sound.stop('bed', 2);
       sound.play('end');
@@ -184,9 +184,9 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
         const base = Math.max(1, lot.base);
         const big = record || s.amount >= 3 * base;
         const bids = lot.bidCount || lotMem.current.bids;
-        sound.gavel(1);
-        if (!sound.play('sold')) sound.soldSting(big);
-        sound.cheer(big);
+        sound.gavel(1, big ? 1.5 : 1.3); // the SOLD strike
+        setTimeout(() => { if (!sound.play('sold')) sound.soldSting(big); }, 70); // fanfare lands with the hammer
+        setTimeout(() => sound.cheer(big), 120);
         const v = {
           p: pl.name, t: t?.name || 'the team', a: say$(s.amount, cur), bids,
         };
@@ -268,9 +268,13 @@ export async function previewMoment(audio, kind) {
     }, i * 1100));
     return;
   }
-  sound.gavel(1);
-  sound.soldSting(true);
-  sound.cheer(true);
+  if (kind === 'hammer') {
+    sound.gavel(1, 1.5);
+    return;
+  }
+  sound.gavel(1, 1.5);
+  setTimeout(() => sound.soldSting(true), 70);
+  setTimeout(() => sound.cheer(true), 120);
   sound.say(line('soldBig', { p: 'Arjun Sen', t: 'Radical Reds', a: '300 points' }), 'urgent', 'hype');
 }
 

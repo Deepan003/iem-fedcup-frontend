@@ -6,6 +6,7 @@
  */
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const AMB_GAIN = 3.2; // built-in music level (measured: ~-20 dB RMS at default volumes)
 
 /* ---------------------------- device preferences ---------------------------- */
 
@@ -410,15 +411,59 @@ class SoundEngine {
     this.osc('sawtooth', 116, t, 0.55, 0.18, { dest: lp });
   }
 
-  /** Auctioneer's gavel: a hard wooden crack, body and a low thump, in the room. */
-  gavel(times = 1) {
+  /** Soft-clip curve: adds punch and weight to the gavel without harsh distortion. */
+  softClip() {
+    if (this.clipCurve) return this.clipCurve;
+    const n = 2048;
+    const c = new Float32Array(n);
+    for (let i = 0; i < n; i += 1) {
+      const x = (i * 2) / n - 1;
+      c[i] = Math.tanh(2.4 * x) / Math.tanh(2.4);
+    }
+    this.clipCurve = c;
+    return c;
+  }
+
+  /**
+   * Auctioneer's gavel. Layers: the swish of the swing, a sharp crack, the ringing hardwood block,
+   * a chest-thumping sub drop, a deep boom and a slap echo off the back wall.
+   * power: 1 = normal strike, 1.3+ = the SOLD strike. The hit lands ~0.08s after the call (the swing comes first).
+   */
+  gavel(times = 1, power = 1) {
     if (!this.can()) return;
     if (this.clip('hammer')) return;
     for (let i = 0; i < times; i += 1) {
-      const t = this.t + i * 0.24;
-      this.noise(t, 0.05, 1, { freq: 2400, q: 2.5 }); // crack
-      this.noise(t, 0.12, 0.8, { freq: 750, q: 1.2 }); // wood body
-      this.osc('sine', 180, t, 0.22, 0.9, { to: 48 }); // thump
+      const last = i === times - 1;
+      const p = clamp(power * (last ? 1 : 0.78), 0.2, 1.6);
+      const t = this.t + 0.08 + i * 0.34;
+      // the swing: a short rising swish into the hit
+      this.noise(t - 0.08, 0.08, 0.16 * p, { freq: 700, to: 3800, q: 1.3, attack: 0.07 });
+      // punch bus: soft clipping makes the strike dense and loud
+      const shaper = this.ctx.createWaveShaper();
+      shaper.curve = this.softClip();
+      shaper.oversample = '2x';
+      const drive = this.ctx.createGain();
+      drive.gain.value = 1.4;
+      const out = this.ctx.createGain();
+      out.gain.value = 0.75;
+      drive.connect(shaper).connect(out).connect(this.fx);
+      // crack: the very first milliseconds of wood on wood
+      this.noise(t, 0.016, 1.3 * p, { type: 'highpass', freq: 2600, attack: 0.0008, dest: drive });
+      this.noise(t, 0.03, 0.95 * p, { freq: 3400, q: 3, attack: 0.0008, dest: drive });
+      // the hardwood sound block ringing (inharmonic partials, quick decay)
+      [[410, 0.2, 0.75], [1010, 0.12, 0.45], [1680, 0.08, 0.3], [2730, 0.05, 0.18]].forEach(([f, d, a]) => {
+        this.osc('sine', f, t, d * (0.8 + p * 0.2), a * p, { attack: 0.0008, to: f * 0.965, dest: drive });
+      });
+      this.noise(t, 0.1, 0.65 * p, { freq: 720, q: 2.6, attack: 0.0008, dest: drive });
+      // weight: sub drop and boom, dry so they hit the chest
+      this.osc('sine', 170, t, 0.45 + p * 0.15, 1.05 * p, { to: 36, attack: 0.0015, dest: this.sfxBus });
+      this.osc('triangle', 95, t, 0.28, 0.45 * p, { to: 44, attack: 0.0015, dest: this.sfxBus });
+      if (p >= 1.2) this.noise(t, 0.6, 0.45, { type: 'lowpass', freq: 380, to: 90, attack: 0.002, dest: this.sfxBus }); // extra boom on SOLD
+      // the room: a slap echo off the back wall, panned off-centre
+      const echo = this.panned(0.35);
+      this.noise(t + 0.115, 0.05, 0.24 * p, { freq: 1200, q: 1.6, attack: 0.002, dest: echo });
+      this.osc('sine', 410, t + 0.115, 0.12, 0.16 * p, { attack: 0.001, dest: echo });
+      this.noise(t + 0.23, 0.04, 0.08 * p, { freq: 1000, q: 1.4, attack: 0.002, dest: this.panned(-0.35) });
     }
   }
 
@@ -759,7 +804,7 @@ class SoundEngine {
     });
   }
 
-  ambientStart(theme = 'calm') {
+  ambientStart(theme = 'calm', slot = 'screens') {
     if (this.amb) return;
     const hz = (m) => 440 * 2 ** ((m - 69) / 12);
     const bus = this.ctx.createGain();
@@ -768,9 +813,21 @@ class SoundEngine {
     const verbSend = this.ctx.createGain();
     verbSend.gain.value = theme === 'groove' ? 0.25 : 0.5;
     bus.connect(verbSend).connect(this.verbIn || this.master);
-    bus.gain.setTargetAtTime(this.musicTarget('screens') * 0.55, this.t, 1.2);
+    bus.gain.setTargetAtTime(this.ambLevel(slot), this.t, 1.2);
 
     const THEMES = {
+      // show: the live-auction bed when no background track is uploaded — steady, tense, out of the announcer's way
+      show: {
+        bpm: 100,
+        chords: [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]],
+        bar: (t, ch, n, beat) => {
+          this.pad(ch, t, beat * 4, bus, { cut: 900, peak: 0.035, attack: 0.4, oct: -12 });
+          for (let i = 0; i < 8; i += 1) this.osc('triangle', hz(ch[0] - 24), t + i * beat / 2, 0.2, i % 2 ? 0.07 : 0.12, { dest: bus });
+          [0, 2].forEach((b) => this.kick(t + b * beat, bus, 0.38));
+          for (let i = 0; i < 8; i += 1) this.hat(t + i * beat / 2, bus, i % 2 ? 0.02 : 0.035);
+          if (n % 2 === 1) this.osc('sine', hz(ch[2] + 12), t + 3 * beat, beat, 0.03, { dest: bus });
+        },
+      },
       // calm: i – VI – III – VII in A minor, slow pads, plucked arpeggio, soft pulse
       calm: {
         bpm: 60,
@@ -860,7 +917,9 @@ class SoundEngine {
       th.bar(this.t + 0.06, th.chords[i], n, beat, root);
       n += 1;
     };
-    this.amb = { bus, iv: setInterval(play, barSec * 1000), theme };
+    this.amb = {
+      bus, iv: setInterval(play, barSec * 1000), theme, slot,
+    };
     play();
   }
 
@@ -895,6 +954,11 @@ class SoundEngine {
 
   hasTrack(slot) { return !!this.music[slot]; }
 
+  /** Built-in music level: the screensaver (no announcer over it) sits ~4 dB above the show bed. */
+  ambLevel(slot) {
+    return this.musicTarget(slot) * AMB_GAIN * (slot === 'screens' ? 1.6 : 1);
+  }
+
   musicTarget(slot) {
     if (!this.musicOn) return 0;
     const base = this.level('music');
@@ -908,7 +972,7 @@ class SoundEngine {
       this.fade(el, this.musicTarget(slot.startsWith('screens') ? 'screens' : slot), 0.35);
     }
     if (!this.musicOn) this.music.bed?.pause();
-    if (this.amb && this.ctx) this.amb.bus.gain.setTargetAtTime(this.musicTarget('screens') * 0.55, this.t, 0.15);
+    if (this.amb && this.ctx) this.amb.bus.gain.setTargetAtTime(this.ambLevel(this.amb.slot), this.t, 0.15);
     if (this.crowdNode && this.crowdOn) this.crowdBus.gain.setTargetAtTime(this.crowdLevel(), this.t, 0.25);
   }
 
@@ -993,7 +1057,15 @@ class SoundEngine {
     this.bedWanted = on;
     this.bedLevel = level;
     const el = this.music.bed;
-    if (!el) return;
+    if (!el) {
+      // no uploaded background track: the built-in show music
+      if (this.screensOn || (this.amb && this.amb.slot !== 'bed')) return; // the screensaver has the music now
+      if (on && this.musicOn && !this.introPlaying && this.ctx) {
+        if (!this.amb) this.ambientStart('show', 'bed');
+        else this.amb.bus.gain.setTargetAtTime(this.ambLevel('bed'), this.t, 0.6);
+      } else if (this.amb?.slot === 'bed') this.ambientStop();
+      return;
+    }
     if (on && (this.introPlaying || this.screensOn)) return; // starts when the intro / screensaver ends
     if (on && this.musicOn) {
       if (el.paused) {
