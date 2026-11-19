@@ -6,7 +6,7 @@
  */
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-const AMB_GAIN = 3.2; // built-in music level (measured: ~-20 dB RMS at default volumes)
+const AMB_GAIN = 1.45; // built-in music level: show bed ~-20 dB RMS under the announcer, screensaver ~-15 dB (measured)
 
 /* ---------------------------- device preferences ---------------------------- */
 
@@ -195,37 +195,68 @@ class SoundEngine {
     return master * (clamp(map[kind] ?? 80, 0, 100) / 100);
   }
 
+  /** Audio graph: master (compressor) <- sfx bus (+ reverb send) and crowd bus. */
+  buildGraph() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    const comp = this.ctx.createDynamicsCompressor(); // glue + no clipping when everything fires at once
+    comp.threshold.value = -14;
+    comp.knee.value = 10;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.25;
+    const limiter = this.ctx.createDynamicsCompressor(); // brickwall: nothing ever clips the speakers
+    limiter.threshold.value = -1.5;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.1;
+    this.master.connect(comp).connect(limiter).connect(this.ctx.destination);
+    this.sfxBus = this.ctx.createGain();
+    this.sfxBus.connect(this.master);
+    // effects go through a "stadium" reverb send so they sound like they're in a big room
+    this.fx = this.ctx.createGain();
+    this.fx.connect(this.sfxBus);
+    this.verb = this.ctx.createConvolver();
+    this.verb.buffer = this.impulse();
+    this.verbIn = this.ctx.createGain();
+    this.verbIn.gain.value = 0.28;
+    this.fx.connect(this.verbIn);
+    this.verbIn.connect(this.verb);
+    this.verb.connect(this.sfxBus);
+    this.crowdBus = this.ctx.createGain();
+    this.crowdBus.gain.value = 0;
+    this.crowdBus.connect(this.master);
+    return true;
+  }
+
+  /**
+   * After a refresh the browser forgets the click that allowed sound. If the browser allows sound
+   * without a click (Edge "media autoplay: allow", Chrome "sound: allow" for the site, a kiosk shortcut),
+   * turn it straight back on; otherwise wait for the first click as usual.
+   */
+  tryAutoUnlock() {
+    if (this.unlocked || this.autoTried || typeof window === 'undefined') return;
+    this.autoTried = true;
+    try {
+      if (!this.ctx && !this.buildGraph()) return;
+      const ok = () => {
+        if (this.unlocked || this.ctx.state !== 'running') return;
+        this.unlocked = true;
+        this.applyLevels();
+        this.emit();
+      };
+      if (this.ctx.state === 'running') ok();
+      else this.ctx.resume().then(ok).catch(() => {}); // resolves straight away only when autoplay is allowed
+    } catch { /* stays locked until a click */ }
+  }
+
   /** Must be called from a click/tap. Creates the audio context and wakes speech. */
   async unlock() {
     try {
-      if (!this.ctx) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return false;
-        this.ctx = new AC();
-        this.master = this.ctx.createGain();
-        const comp = this.ctx.createDynamicsCompressor(); // glue + no clipping when everything fires at once
-        comp.threshold.value = -14;
-        comp.knee.value = 10;
-        comp.ratio.value = 4;
-        comp.attack.value = 0.004;
-        comp.release.value = 0.25;
-        this.master.connect(comp).connect(this.ctx.destination);
-        this.sfxBus = this.ctx.createGain();
-        this.sfxBus.connect(this.master);
-        // effects go through a "stadium" reverb send so they sound like they're in a big room
-        this.fx = this.ctx.createGain();
-        this.fx.connect(this.sfxBus);
-        this.verb = this.ctx.createConvolver();
-        this.verb.buffer = this.impulse();
-        this.verbIn = this.ctx.createGain();
-        this.verbIn.gain.value = 0.28;
-        this.fx.connect(this.verbIn);
-        this.verbIn.connect(this.verb);
-        this.verb.connect(this.sfxBus);
-        this.crowdBus = this.ctx.createGain();
-        this.crowdBus.gain.value = 0;
-        this.crowdBus.connect(this.master);
-      }
+      if (!this.ctx && !this.buildGraph()) return false;
       if (this.ctx.state === 'suspended') await this.ctx.resume();
       if (window.speechSynthesis) {
         const u = new SpeechSynthesisUtterance(' ');
@@ -770,24 +801,98 @@ class SoundEngine {
     }
   }
 
-  /* drum kit for the generated themes (all routed to the music bus) */
-  kick(t, dest, peak = 0.55) {
-    this.osc('sine', 125, t, 0.3, peak, { to: 42, dest });
-    this.noise(t, 0.02, peak * 0.25, { type: 'highpass', freq: 3000, dest });
+  /* ---------- built-in music: instruments ---------- */
+
+  /** Punchy kick: fast pitch drop + click + sub tail. */
+  kick(t, dest, p = 0.9) {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(165, t);
+    o.frequency.exponentialRampToValueAtTime(52, t + 0.09);
+    o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(p, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(p * 0.5, t + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+    o.connect(g).connect(dest);
+    o.start(t);
+    o.stop(t + 0.45);
+    this.noise(t, 0.012, p * 0.45, { type: 'highpass', freq: 3500, attack: 0.001, dest });
   }
 
-  snare(t, dest, peak = 0.2) {
-    this.noise(t, 0.17, peak, { freq: 1900, q: 0.7, dest });
-    this.osc('triangle', 195, t, 0.08, peak * 0.6, { to: 150, dest });
+  snare(t, dest, p = 0.35) {
+    this.noise(t, 0.16, p, { freq: 2000, q: 0.8, attack: 0.001, dest });
+    this.noise(t, 0.05, p * 0.6, { type: 'highpass', freq: 5000, attack: 0.001, dest });
+    this.osc('triangle', 200, t, 0.09, p * 0.7, { to: 150, attack: 0.001, dest });
   }
 
-  hat(t, dest, peak = 0.05) {
-    this.noise(t, 0.035, peak, { type: 'highpass', freq: 7500, dest });
+  clap(t, dest, p = 0.4) {
+    for (let i = 0; i < 3; i += 1) this.noise(t + i * 0.011, 0.018, p, { freq: 1500, q: 1.3, attack: 0.001, dest });
+    this.noise(t + 0.033, 0.2, p * 0.75, { freq: 1300, q: 0.9, attack: 0.001, dest });
   }
 
-  tom(t, f, dest, peak = 0.5) {
-    this.osc('sine', f, t, 0.5, peak, { to: f * 0.55, dest });
-    this.noise(t, 0.06, peak * 0.25, { type: 'lowpass', freq: 700, dest });
+  hat(t, dest, p = 0.08, open = false) {
+    this.noise(t, open ? 0.22 : 0.035, p, { type: 'highpass', freq: open ? 6500 : 8000, attack: 0.001, dest });
+  }
+
+  tom(t, f, dest, p = 0.5) {
+    this.osc('sine', f, t, 0.45, p, { to: f * 0.55, attack: 0.001, dest });
+    this.noise(t, 0.06, p * 0.25, { type: 'lowpass', freq: 700, attack: 0.001, dest });
+  }
+
+  crash(t, dest, p = 0.25) {
+    this.noise(t, 2, p, { type: 'highpass', freq: 5200, attack: 0.002, dest });
+  }
+
+  /** Sweep up into the next section. */
+  sweep(t, dur, dest, p = 0.16) {
+    this.noise(t, dur, p, { type: 'bandpass', freq: 300, to: 7000, q: 1.8, attack: dur * 0.9, dest });
+  }
+
+  /** Snare roll that builds over one bar (into a drop). */
+  roll(t, beat, dest) {
+    for (let i = 0; i < 16; i += 1) this.snare(t + i * beat / 4, dest, 0.08 + (i / 16) * 0.3);
+  }
+
+  /** Bass note: saw + sub through a closing low-pass (a plucky, moving bass). */
+  bassNote(m, t, dur, dest, p = 0.22, cut = 700) {
+    const f = 440 * 2 ** ((m - 69) / 12);
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.Q.value = 4;
+    lp.frequency.setValueAtTime(cut * 2.2, t);
+    lp.frequency.exponentialRampToValueAtTime(cut * 0.5, t + dur);
+    lp.connect(dest);
+    this.osc('sawtooth', f, t, dur, p, { attack: 0.004, dest: lp });
+    this.osc('sine', f / 2, t, dur, p * 1.1, { attack: 0.004, dest });
+  }
+
+  /** Bright plucked lead / arp note. */
+  pluck(m, t, dur, dest, p = 0.1, type = 'sawtooth') {
+    const f = 440 * 2 ** ((m - 69) / 12);
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.Q.value = 3;
+    lp.frequency.setValueAtTime(4200, t);
+    lp.frequency.exponentialRampToValueAtTime(700, t + dur);
+    lp.connect(dest);
+    this.osc(type, f, t, dur, p, { attack: 0.003, dest: lp, detune: 6 });
+    this.osc(type, f, t, dur, p * 0.7, { attack: 0.003, dest: lp, detune: -6 });
+  }
+
+  /** Short chord stab (house / anthem stabs). */
+  stab(midis, t, dur, dest, p = 0.06) {
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3200, t);
+    lp.frequency.exponentialRampToValueAtTime(900, t + dur);
+    lp.connect(dest);
+    midis.forEach((m) => {
+      const f = 440 * 2 ** ((m - 69) / 12);
+      this.osc('sawtooth', f, t, dur, p, { attack: 0.004, dest: lp, detune: 9 });
+      this.osc('sawtooth', f, t, dur, p, { attack: 0.004, dest: lp, detune: -9 });
+    });
   }
 
   pad(midis, t, dur, dest, {
@@ -804,105 +909,143 @@ class SoundEngine {
     });
   }
 
+  /** "Pumping": the music ducks on every kick and swells back, like a dance track. */
+  pump(gainNode, t, beat, depth = 0.65) {
+    const g = gainNode.gain;
+    g.setValueAtTime(1 - depth, t);
+    g.linearRampToValueAtTime(1, t + beat * 0.7);
+  }
+
+  /* ---------- built-in music: themes ---------- */
+
   ambientStart(theme = 'calm', slot = 'screens') {
     if (this.amb) return;
-    const hz = (m) => 440 * 2 ** ((m - 69) / 12);
     const bus = this.ctx.createGain();
     bus.gain.value = 0;
     bus.connect(this.master);
     const verbSend = this.ctx.createGain();
-    verbSend.gain.value = theme === 'groove' ? 0.25 : 0.5;
+    verbSend.gain.value = 0.22;
     bus.connect(verbSend).connect(this.verbIn || this.master);
-    bus.gain.setTargetAtTime(this.ambLevel(slot), this.t, 1.2);
+    bus.gain.setTargetAtTime(this.ambLevel(slot), this.t, 1);
+    // drums go straight to the bus; everything else through a "pump" that ducks on the kick
+    const drums = this.ctx.createGain();
+    drums.connect(bus);
+    const syn = this.ctx.createGain();
+    syn.connect(bus);
 
+    // Each theme: tempo, 4 chords (MIDI), bass roots, hook (MIDI), and a bar() that writes one bar.
+    // Bars run in 8-bar phrases: 0-3 groove, 4-6 the hook comes in, 7 a build (roll + sweep), then a crash on 0.
     const THEMES = {
-      // show: the live-auction bed when no background track is uploaded — steady, tense, out of the announcer's way
+      // live auction bed: driving 124 bpm house in A minor
       show: {
-        bpm: 100,
+        bpm: 124,
         chords: [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]],
-        bar: (t, ch, n, beat) => {
-          this.pad(ch, t, beat * 4, bus, { cut: 900, peak: 0.035, attack: 0.4, oct: -12 });
-          for (let i = 0; i < 8; i += 1) this.osc('triangle', hz(ch[0] - 24), t + i * beat / 2, 0.2, i % 2 ? 0.07 : 0.12, { dest: bus });
-          [0, 2].forEach((b) => this.kick(t + b * beat, bus, 0.38));
-          for (let i = 0; i < 8; i += 1) this.hat(t + i * beat / 2, bus, i % 2 ? 0.02 : 0.035);
-          if (n % 2 === 1) this.osc('sine', hz(ch[2] + 12), t + 3 * beat, beat, 0.03, { dest: bus });
+        roots: [45, 41, 48, 43],
+        hook: [76, 74, 72, 69, 72, 74, 76, 79],
+        bar: (t, ch, n, b, root, hook) => {
+          const ph = n % 8;
+          for (let i = 0; i < 4; i += 1) { this.kick(t + i * b, drums, 0.7); this.pump(syn, t + i * b, b, 0.6); }
+          [1, 3].forEach((i) => this.clap(t + i * b, drums, 0.28));
+          for (let i = 0; i < 4; i += 1) { this.hat(t + (i + 0.5) * b, drums, 0.09, true); this.hat(t + i * b, drums, 0.04); }
+          for (let i = 0; i < 4; i += 1) this.bassNote(root, t + (i + 0.5) * b, b * 0.45, syn, 0.16, 520);
+          this.pad(ch, t, b * 4, syn, { cut: 1400, peak: 0.022, attack: 0.05, oct: -12 });
+          if (ph >= 4 && ph < 7) for (let i = 0; i < 8; i += 1) this.pluck(hook[(i + n) % 8], t + i * b / 2, b * 0.4, syn, 0.05);
+          if (ph === 7) { this.roll(t, b, drums); this.sweep(t, b * 4, drums, 0.12); }
+          if (ph === 0) this.crash(t, drums, 0.18);
         },
       },
-      // calm: i – VI – III – VII in A minor, slow pads, plucked arpeggio, soft pulse
-      calm: {
-        bpm: 60,
-        chords: [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]],
-        bar: (t, ch, n, beat) => {
-          this.pad(ch, t, beat * 4, bus, { cut: 1100, peak: 0.05, attack: 1.2, oct: -12 });
-          this.osc('sine', hz(ch[0] - 24), t, beat * 4, 0.22, { attack: 0.3, dest: bus });
-          const arp = [...ch, ch[1] + 12, ch[2] + 12, ch[0] + 12];
-          for (let i = 0; i < 8; i += 1) this.osc('triangle', hz(arp[(i * 3 + n) % arp.length] + 12), t + i * beat / 2, 0.35, 0.05, { dest: bus });
-          for (let i = 0; i < 4; i += 1) this.osc('sine', 70, t + i * beat, 0.18, 0.18, { to: 45, dest: bus });
-        },
-      },
-      // proud (retained players): D major I – V – vi – IV, warm brass pad, marching drums, bell melody
+      // retained players: 128 bpm festival anthem in D major, big stabs and a heroic hook
       proud: {
-        bpm: 96,
-        chords: [[62, 66, 69], [61, 64, 69], [62, 66, 71], [62, 67, 71]],
-        roots: [38, 33, 35, 31],
-        bar: (t, ch, n, beat, root) => {
-          this.pad(ch, t, beat * 4, bus, { cut: 1700, peak: 0.035, attack: 0.12, oct: -12 });
-          for (let i = 0; i < 8; i += 1) this.osc('triangle', hz(root), t + i * beat / 2, 0.22, i % 2 ? 0.08 : 0.13, { dest: bus });
-          [0, 2].forEach((b) => this.kick(t + b * beat, bus, 0.5));
-          [1, 3].forEach((b) => this.snare(t + b * beat, bus, 0.18));
-          for (let i = 0; i < 8; i += 1) this.hat(t + i * beat / 2, bus, i % 2 ? 0.03 : 0.05);
-          if (n % 4 === 3) [2.5, 3, 3.5].forEach((b) => this.snare(t + b * beat, bus, 0.12)); // fill
-          const tune = [[2, 1, 0, 1], [0, 1, 2, 2], [1, 2, 1, 0], [0, 0, 1, 2]][n % 4];
-          tune.forEach((k, i) => this.osc('sine', hz(ch[k] + 12), t + i * beat, beat * 0.9, 0.06, { attack: 0.01, dest: bus }));
+        bpm: 128,
+        chords: [[62, 66, 69], [61, 64, 69], [59, 62, 66], [55, 59, 62]],
+        roots: [38, 45, 47, 43],
+        hook: [74, 76, 78, 81, 78, 76, 74, 73],
+        bar: (t, ch, n, b, root, hook) => {
+          const ph = n % 8;
+          for (let i = 0; i < 4; i += 1) { this.kick(t + i * b, drums, 0.8); this.pump(syn, t + i * b, b, 0.7); }
+          [1, 3].forEach((i) => { this.clap(t + i * b, drums, 0.32); this.snare(t + i * b, drums, 0.15); });
+          for (let i = 0; i < 8; i += 1) this.hat(t + i * b / 2, drums, i % 2 ? 0.1 : 0.05, i % 2 === 1);
+          for (let i = 0; i < 8; i += 1) this.bassNote(root + (i % 4 === 3 ? 12 : 0), t + i * b / 2, b * 0.42, syn, 0.15, 650);
+          [0.5, 1.5, 2.5, 3.5].forEach((x) => this.stab(ch, t + x * b, b * 0.4, syn, 0.035));
+          if (ph >= 4 && ph < 7) hook.forEach((m, i) => this.pluck(m, t + i * b / 2, b * 0.48, syn, 0.07));
+          if (ph === 7) { this.roll(t, b, drums); this.sweep(t, b * 4, drums, 0.14); }
+          if (ph === 0) this.crash(t, drums, 0.22);
         },
       },
-      // epic (top 3): C minor i – VI – III – VII, strings, choir, taiko drums, cymbal swells
+      // top 3: 96 bpm hybrid trailer — taiko + kit, braams, staccato strings, hits
       epic: {
-        bpm: 80,
-        chords: [[60, 63, 67], [60, 63, 68], [58, 63, 67], [58, 62, 65]],
+        bpm: 96,
+        chords: [[60, 63, 67], [56, 60, 63], [63, 67, 70], [58, 62, 65]],
         roots: [36, 32, 39, 34],
-        bar: (t, ch, n, beat, root) => {
-          this.pad(ch, t, beat * 4, bus, { cut: 1300, peak: 0.045, attack: 0.9, oct: -12 });
-          this.pad([ch[0] + 12, ch[2] + 12], t, beat * 4, bus, { cut: 2200, peak: 0.02, attack: 1.4, type: 'triangle' });
-          this.osc('sine', hz(root), t, beat * 4, 0.28, { attack: 0.2, dest: bus });
-          [[0, 95, 0.6], [1.5, 80, 0.4], [2, 95, 0.55], [3, 70, 0.45], [3.5, 70, 0.35]].forEach(([b, f, p]) => this.tom(t + b * beat, f, bus, p));
-          if (n % 4 === 3) this.noise(t + beat * 2, beat * 2, 0.12, { type: 'highpass', freq: 5000, attack: beat * 1.9, dest: bus });
-          if (n % 4 === 0) this.noise(t, 1.8, 0.14, { type: 'highpass', freq: 5200, dest: bus });
+        hook: [72, 75, 74, 72, 70, 72, 67, 70],
+        bar: (t, ch, n, b, root, hook) => {
+          const ph = n % 8;
+          this.kick(t, drums, 0.95);
+          this.kick(t + 2.5 * b, drums, 0.75);
+          [1, 3].forEach((i) => this.snare(t + i * b, drums, 0.4));
+          [[0, 95, 0.55], [0.75, 80, 0.35], [1.5, 95, 0.45], [2, 70, 0.4], [2.75, 80, 0.35], [3.25, 95, 0.4], [3.5, 70, 0.45]].forEach(([x, f, p]) => this.tom(t + x * b, f, drums, p));
+          for (let i = 0; i < 16; i += 1) this.hat(t + i * b / 4, drums, i % 4 === 2 ? 0.07 : 0.035);
+          for (let i = 0; i < 8; i += 1) this.pluck(ch[i % 3] + (i % 2 ? 12 : 0), t + i * b / 2, b * 0.3, syn, 0.045); // staccato strings
+          if (n % 2 === 0) this.pad(ch, t, b * 4, syn, { cut: 900, peak: 0.05, attack: 0.02, oct: -12 }); // braam
+          this.osc('sine', 440 * 2 ** ((root - 69) / 12), t, b * 4, 0.3, { attack: 0.01, dest: syn });
+          if (ph >= 4 && ph < 7) hook.forEach((m, i) => this.pluck(m, t + i * b / 2, b * 0.48, syn, 0.06, 'square'));
+          if (ph === 7) { this.roll(t, b, drums); this.sweep(t, b * 4, drums, 0.15); }
+          if (ph === 0) { this.crash(t, drums, 0.25); this.tom(t, 60, drums, 0.8); }
         },
       },
-      // tense (bid replays): E minor, driving 16th ostinato, four-on-the-floor, low drone
+      // bid replays: 140 bpm thriller — breakbeat, rolling bass, 16th ostinato
       tense: {
-        bpm: 126,
-        chords: [[64, 67, 71], [64, 67, 72], [64, 69, 72], [63, 66, 71]],
+        bpm: 140,
+        chords: [[64, 67, 71], [60, 64, 67], [57, 60, 64], [59, 63, 66]],
         roots: [40, 36, 33, 35],
-        bar: (t, ch, n, beat, root) => {
-          this.osc('sawtooth', hz(root - 12), t, beat * 4, 0.06, { attack: 0.05, dest: bus });
-          const lp = this.ctx.createBiquadFilter();
-          lp.type = 'lowpass';
-          lp.frequency.setValueAtTime(800 + (n % 4) * 300, t);
-          lp.frequency.linearRampToValueAtTime(1600 + (n % 4) * 400, t + beat * 4);
-          lp.connect(bus);
-          const seq = [ch[0], ch[0] + 12, ch[1], ch[0] + 12, ch[2], ch[0] + 12, ch[1], ch[0] + 12];
-          for (let i = 0; i < 16; i += 1) this.osc('square', hz(seq[i % 8]), t + i * beat / 4, 0.09, 0.03, { dest: lp });
-          for (let i = 0; i < 4; i += 1) this.kick(t + i * beat, bus, 0.45);
-          for (let i = 0; i < 4; i += 1) this.hat(t + (i + 0.5) * beat, bus, 0.06);
-          if (n % 2 === 1) this.snare(t + 3.5 * beat, bus, 0.12);
+        hook: [76, 79, 78, 76, 74, 76, 71, 74],
+        bar: (t, ch, n, b, root, hook) => {
+          const ph = n % 8;
+          [0, 1.5, 2.5].forEach((x) => { this.kick(t + x * b, drums, 0.8); this.pump(syn, t + x * b, b, 0.5); });
+          [1, 3].forEach((i) => this.snare(t + i * b, drums, 0.42));
+          for (let i = 0; i < 16; i += 1) this.hat(t + i * b / 4, drums, i % 2 ? 0.035 : 0.06);
+          this.bassNote(root, t, b * 1.4, syn, 0.17, 380);
+          this.bassNote(root, t + 1.5 * b, b * 0.9, syn, 0.15, 380);
+          this.bassNote(root + 3, t + 2.5 * b, b * 1.4, syn, 0.15, 380);
+          const seq = [ch[0], ch[0] + 12, ch[1], ch[0] + 12, ch[2], ch[0] + 12, ch[1], ch[2] + 12];
+          for (let i = 0; i < 16; i += 1) this.pluck(seq[i % 8], t + i * b / 4, b * 0.22, syn, 0.032, 'square');
+          if (ph >= 4 && ph < 7) hook.forEach((m, i) => this.pluck(m, t + i * b / 2, b * 0.45, syn, 0.06));
+          if (ph === 7) { this.roll(t, b, drums); this.sweep(t, b * 4, drums, 0.14); }
+          if (ph === 0) this.crash(t, drums, 0.2);
         },
       },
-      // groove (team sheets / the table): lo-fi Dm7 – G7 – Cmaj7 – Am7, electric piano, lazy swing beat
+      // team sheets / the table: 112 bpm funk — syncopated bass, chord chops, swung hats
       groove: {
-        bpm: 86,
+        bpm: 112,
         chords: [[62, 65, 69, 72], [59, 65, 67, 71], [60, 64, 67, 71], [57, 60, 64, 67]],
         roots: [38, 43, 36, 45],
-        bar: (t, ch, n, beat, root) => {
-          [0, 2.5].forEach((b) => ch.forEach((m) => {
-            this.osc('sine', hz(m), t + b * beat, beat * 1.4, 0.035, { attack: 0.01, dest: bus });
-            this.osc('triangle', hz(m + 12), t + b * beat, beat * 0.5, 0.008, { attack: 0.005, dest: bus });
-          }));
-          [[0, 0.16], [1.75, 0.1], [2.5, 0.14]].forEach(([b, p]) => this.osc('triangle', hz(root - 12), t + b * beat, beat * 0.7, p, { dest: bus }));
-          [0, 2.25].forEach((b) => this.kick(t + b * beat, bus, 0.4));
-          [1, 3].forEach((b) => this.snare(t + b * beat, bus, 0.1));
-          for (let i = 0; i < 8; i += 1) this.hat(t + i * beat / 2 + (i % 2 ? beat * 0.08 : 0), bus, i % 2 ? 0.025 : 0.04);
+        hook: [74, 72, 69, 72, 74, 77, 76, 74],
+        bar: (t, ch, n, b, root, hook) => {
+          const ph = n % 8;
+          [0, 0.75, 2, 2.5].forEach((x) => this.kick(t + x * b, drums, 0.7));
+          [1, 3].forEach((i) => { this.clap(t + i * b, drums, 0.3); this.snare(t + i * b, drums, 0.12); });
+          for (let i = 0; i < 16; i += 1) this.hat(t + i * b / 4 + (i % 2 ? b * 0.06 : 0), drums, i % 4 === 2 ? 0.08 : 0.035, i === 14);
+          [[0, 0], [0.75, 12], [1.5, 0], [2, 7], [2.5, 0], [3.25, 10]].forEach(([x, k]) => this.bassNote(root + k, t + x * b, b * 0.3, syn, 0.17, 900));
+          [0.5, 1.75, 2.5, 3.5].forEach((x) => this.stab(ch, t + x * b, b * 0.22, syn, 0.026));
+          if (ph >= 4 && ph < 7) hook.forEach((m, i) => this.pluck(m, t + i * b / 2, b * 0.4, syn, 0.055, 'square'));
+          if (ph === 7) this.sweep(t, b * 4, drums, 0.1);
+          if (ph === 0) this.crash(t, drums, 0.15);
+        },
+      },
+      // your own slides: 88 bpm chill-hop — soft kit, warm keys, lazy bass
+      calm: {
+        bpm: 88,
+        chords: [[57, 60, 64, 67], [53, 57, 60, 64], [60, 64, 67, 71], [55, 59, 62, 65]],
+        roots: [45, 41, 48, 43],
+        hook: [76, 72, 74, 71, 72, 67, 69, 72],
+        bar: (t, ch, n, b, root, hook) => {
+          const ph = n % 8;
+          [0, 1.75, 2.5].forEach((x) => this.kick(t + x * b, drums, 0.55));
+          [1, 3].forEach((i) => this.snare(t + i * b, drums, 0.2));
+          for (let i = 0; i < 8; i += 1) this.hat(t + i * b / 2 + (i % 2 ? b * 0.09 : 0), drums, i % 2 ? 0.03 : 0.05);
+          this.pad(ch, t, b * 4, syn, { cut: 1600, peak: 0.03, attack: 0.08, type: 'triangle' });
+          [0, 2.5].forEach((x) => this.bassNote(root, t + x * b, b * 1.2, syn, 0.14, 450));
+          if (ph >= 4) hook.slice(0, 4).forEach((m, i) => this.pluck(m, t + i * b, b * 0.8, syn, 0.04, 'triangle'));
         },
       },
     };
@@ -913,8 +1056,7 @@ class SoundEngine {
     const play = () => {
       if (!this.ctx || !this.amb || this.amb.bus !== bus) return;
       const i = n % th.chords.length;
-      const root = th.roots ? th.roots[i] : th.chords[i][0] - 24;
-      th.bar(this.t + 0.06, th.chords[i], n, beat, root);
+      th.bar(this.t + 0.06, th.chords[i], n, beat, th.roots[i], th.hook);
       n += 1;
     };
     this.amb = {
@@ -956,7 +1098,7 @@ class SoundEngine {
 
   /** Built-in music level: the screensaver (no announcer over it) sits ~4 dB above the show bed. */
   ambLevel(slot) {
-    return this.musicTarget(slot) * AMB_GAIN * (slot === 'screens' ? 1.6 : 1);
+    return this.musicTarget(slot) * AMB_GAIN * (slot === 'screens' ? 2.2 : 1);
   }
 
   musicTarget(slot) {

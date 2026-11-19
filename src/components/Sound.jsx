@@ -55,6 +55,11 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
     sound.configure({ settings: audio || {}, prefs, surface });
   }, [audioKey, prefs, surface, unlocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // After a refresh: turn sound straight back on if this browser allows it without a click.
+  useEffect(() => {
+    if (!unlocked && prefs.on && surfaceAllowed(audio, surface)) sound.tryAutoUnlock();
+  }, [audioKey, prefs.on, surface]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // First tap/click anywhere unlocks sound (browsers block audio until a gesture).
   useEffect(() => {
     if (unlocked || !prefs.on || !surfaceAllowed(audio, surface)) return undefined;

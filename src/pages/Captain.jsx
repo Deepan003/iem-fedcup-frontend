@@ -227,6 +227,14 @@ function CaptainRoom({ auth, onLogout }) {
 
   const others = state.teams.filter((t) => t.id !== auth.team.id);
 
+  // Live "what's left if this bid wins": the current bid if you lead, else the bid you'd place next
+  const purse = me?.purse ?? 0;
+  const live = lot && ['bidding', 'awaiting'].includes(lot.phase);
+  const afterAmount = !live ? null : leading ? lot.amount : (!reason ? lot.nextAmount : null);
+  const after = afterAmount != null ? purse - afterAmount : null;
+  const budget = me?.budget || purse;
+  const tight = after != null && budget > 0 && after < budget * 0.2;
+
   return (
     <main className="container studio" style={{ paddingBottom: 0, paddingTop: 80 }}>
       <div className="studio-bg" />
@@ -239,6 +247,12 @@ function CaptainRoom({ auth, onLogout }) {
         <div style={{ textAlign: 'right' }}>
           <div className="money"><RollingNumber value={me?.purse ?? 0} money /></div>
           <span className="tiny">{state.currency} left</span>
+          {after != null && (
+            <div className={`after-bid ${leading ? 'lead' : ''} ${tight ? 'tight' : ''}`} aria-live="polite">
+              <span className="tiny">{leading ? 'If you win' : `After bidding ${money(afterAmount, state.currency)}`}</span>
+              <b><RollingNumber value={after} money /> <small>{state.currency}</small></b>
+            </div>
+          )}
           {me?.penalty > 0 && <span className="pen-tag" style={{ display: 'block' }} title={(me.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>incl. −{money(me.penalty, state.currency)} penalty</span>}
         </div>
       </div>

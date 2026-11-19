@@ -720,3 +720,12 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
   .sold-plate { gap: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .sold-confetti, .sold-flash { display: none; } }
+
+/* captain: purse left if the current bid wins */
+.after-bid { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; margin-top: 8px; padding: 6px 10px; border-right: 3px solid var(--bone-3, #888); background: rgba(255, 255, 255, 0.04); animation: fade-up 0.35s var(--ease) both; }
+.after-bid b { font-family: var(--display); font-weight: 900; font-size: 22px; line-height: 1; }
+.after-bid b small { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; opacity: 0.7; }
+.after-bid.lead { border-right-color: var(--go, #2bd576); }
+.after-bid.lead b { color: var(--go, #2bd576); }
+.after-bid.tight { border-right-color: var(--amber, #f59e0b); }
+.after-bid.tight b { color: var(--amber, #f59e0b); }
