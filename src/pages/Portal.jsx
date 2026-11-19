@@ -4,6 +4,7 @@ import { useAuction } from '../lib/auction.js';
 import { money, POSITIONS, initials, setMoneyDecimals,
 } from '../lib/format.js';
 import { Spinner, TeamLogo } from '../components/ui.jsx';
+import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 
 const STATUS = {
   sold: 'Sold', retained: 'Retained', unsold: 'Unsold', available: 'In the pool',
@@ -59,7 +60,8 @@ export default function Portal() {
   }, [config, code]);
 
   // Live: when a player is sold/retained or data changes, refresh the list automatically.
-  const { state: live } = useAuction();
+  const { state: live, now: liveNow } = useAuction();
+  const snd = useAuctionSound(live, liveNow, { surface: 'studio' }); // hear the live auction while browsing
   const liveKey = live ? `${live.dataV}-${live.stats.sold}-${live.stats.unsold}-${live.stats.retained}` : '';
   useEffect(() => {
     if (!liveKey || !players) return;
@@ -131,6 +133,7 @@ export default function Portal() {
           })}
         </div>
       )}
+      {live?.status === 'live' && <SoundDock state={live} sound={snd} surface="studio" />}
     </main>
   );
 }

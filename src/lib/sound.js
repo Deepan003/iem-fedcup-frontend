@@ -55,7 +55,8 @@ export function pickVoice(gender, preferredName = '') {
     if (/en-IN/i.test(v.lang)) s += 3;
     else if (/en-GB/i.test(v.lang)) s += 2;
     else if (/en-US/i.test(v.lang)) s += 1;
-    if (/natural|neural|online/i.test(v.name)) s += 2;
+    if (/natural|neural|online/i.test(v.name)) s += 6; // e.g. Edge "… Online (Natural)"
+    else if (/google/i.test(v.name)) s += 3; // Chrome's network voices
     return s;
   };
   return [...voices].sort((a, b) => score(b) - score(a))[0];
@@ -219,6 +220,7 @@ class SoundEngine {
   /** Bid tick: pitch climbs with how far the price is above base. */
   bid(multiple = 1) {
     if (!this.can()) return;
+    if (this.clip('bid', 0.9)) return;
     const t = this.t;
     const step = clamp(Math.log2(Math.max(1, multiple)), 0, 2.5);
     const f = 520 * 2 ** (step * 0.5);
@@ -249,6 +251,7 @@ class SoundEngine {
   /** Auctioneer's gavel: a wooden knock with a low thump. */
   gavel(times = 1) {
     if (!this.can()) return;
+    if (this.clip('hammer')) return;
     for (let i = 0; i < times; i += 1) {
       const t = this.t + i * 0.22;
       this.noise(t, 0.09, 0.9, { freq: 1100, q: 1.4 });
@@ -259,6 +262,7 @@ class SoundEngine {
   /** New player: an airy whoosh. */
   whoosh() {
     if (!this.can()) return;
+    if (this.clip('newPlayer')) return;
     this.noise(this.t, 0.7, 0.4, { freq: 300, to: 3200, q: 0.8, attack: 0.25 });
   }
 
@@ -303,6 +307,7 @@ class SoundEngine {
   /** Synth "SOLD" sting (used when no sold track is uploaded). */
   soldSting() {
     if (!this.can()) return;
+    this.impact();
     const t = this.t + 0.12;
     const lp = this.ctx.createBiquadFilter();
     lp.type = 'lowpass';
@@ -316,9 +321,20 @@ class SoundEngine {
     this.osc('sine', 65.41, t, 0.9, 0.5, { attack: 0.01 });
   }
 
+  /** Deep stadium impact: sub boom + air burst. */
+  impact() {
+    if (!this.can()) return;
+    const t = this.t;
+    this.osc('sine', 110, t, 0.9, 0.95, { to: 32, attack: 0.004 });
+    this.osc('triangle', 220, t, 0.25, 0.25, { to: 60 });
+    this.noise(t, 0.45, 0.6, { type: 'lowpass', freq: 1800, to: 200 });
+    this.noise(t + 0.02, 1.4, 0.18, { type: 'highpass', freq: 3000, attack: 0.05 });
+  }
+
   /** Record broken: rising chime arpeggio. */
   chime() {
     if (!this.can()) return;
+    if (this.clip('record')) return;
     [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
       this.osc('sine', f, this.t + i * 0.09, 0.6, 0.18);
       this.osc('triangle', f * 2, this.t + i * 0.09, 0.3, 0.05);
@@ -328,6 +344,7 @@ class SoundEngine {
   /** Unsold: a soft descending tone. */
   unsold() {
     if (!this.can()) return;
+    if (this.clip('unsold')) return;
     this.osc('sine', 330, this.t, 0.6, 0.3, { to: 140 });
     this.osc('triangle', 220, this.t + 0.05, 0.6, 0.12, { to: 98 });
   }
@@ -404,7 +421,7 @@ class SoundEngine {
   /* ---------- music ---------- */
 
   syncTracks(tracks) {
-    for (const slot of ['intro', 'bed', 'sold']) {
+    for (const slot of ['intro', 'bed', 'sold', 'end', 'bid', 'newPlayer', 'hammer', 'record', 'unsold']) {
       const url = tracks[slot]?.url || '';
       if (this.trackUrls[slot] === url) continue;
       this.trackUrls[slot] = url;
@@ -412,7 +429,8 @@ class SoundEngine {
       if (!url) { delete this.music[slot]; continue; }
       const el = new Audio();
       el.src = url;
-      el.preload = slot === 'bed' ? 'auto' : 'metadata';
+      el.preload = ['intro', 'end'].includes(slot) ? 'metadata' : 'auto';
+      if (slot === 'intro') el.addEventListener('ended', () => this.introDone());
       el.loop = slot === 'bed';
       el.volume = 0;
       this.music[slot] = el;
@@ -453,9 +471,49 @@ class SoundEngine {
     const el = this.music[slot];
     if (!el || !this.musicOn) return false;
     try {
+      clearTimeout(el._stop);
       el.currentTime = 0;
       el.volume = this.musicTarget(slot);
       el.play().catch(() => {});
+      if (slot === 'intro') {
+        this.introPlaying = true;
+        const max = Number(this.settings.introSeconds ?? 25);
+        if (max > 0) {
+          el._stop = setTimeout(() => {
+            this.fade(el, 0, 1.5);
+            setTimeout(() => { el.pause(); this.introDone(); }, 1600);
+          }, Math.max(0, max * 1000 - 1500));
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Stop music in a slot with a short fade (e.g. intro when the first player comes up). */
+  stop(slot, seconds = 1) {
+    const el = this.music[slot];
+    if (!el || el.paused) return;
+    clearTimeout(el._stop);
+    this.fade(el, 0, seconds);
+    setTimeout(() => { el.pause(); if (slot === 'intro') this.introDone(); }, seconds * 1000 + 100);
+  }
+
+  introDone() {
+    if (!this.introPlaying) return;
+    this.introPlaying = false;
+    if (this.bedWanted) this.bed(true);
+  }
+
+  /** A short uploaded effect clip (overlapping allowed). Returns false when no clip is uploaded. */
+  clip(slot, vol = 1) {
+    const el = this.music[slot];
+    if (!el || !this.active) return false;
+    try {
+      const a = el.cloneNode(true);
+      a.volume = clamp(this.level('sfx') * vol, 0, 1);
+      a.play().catch(() => {});
       return true;
     } catch {
       return false;
@@ -468,6 +526,7 @@ class SoundEngine {
     this.bedLevel = level;
     const el = this.music.bed;
     if (!el) return;
+    if (on && this.introPlaying) return; // starts when the intro ends
     if (on && this.musicOn) {
       if (el.paused) {
         el.volume = 0;
@@ -486,7 +545,7 @@ class SoundEngine {
    * Speak a line. kind: 'bid' lines replace each other (only the latest bid is called);
    * 'urgent' interrupts everything (sold, new player); others queue.
    */
-  say(text, kind = 'info') {
+  say(text, kind = 'info', mood = 'normal') {
     if (!this.voiceOn || !window.speechSynthesis || !text) return;
     if (kind === 'urgent') {
       this.voiceGen += 1;
@@ -497,7 +556,7 @@ class SoundEngine {
       // a new bid resets the clock: drop older bid calls and any pending 'going once / twice'
       this.voiceQueue = this.voiceQueue.filter((q) => q.kind !== 'bid' && q.kind !== 'going');
     }
-    this.voiceQueue.push({ text, kind });
+    this.voiceQueue.push({ text, kind, mood });
     if (!this.speaking) this.nextLine();
   }
 
@@ -514,9 +573,14 @@ class SoundEngine {
       u.voice = voice;
       u.lang = voice.lang;
     }
-    u.rate = clamp((this.settings.voiceRate ?? 100) / 100, 0.6, 1.4);
-    u.pitch = this.settings.voiceGender === 'female' ? 1.05 : 0.95;
-    u.volume = this.level('voice');
+    // Emotion: excitement speeds up and lifts the voice; disappointment slows and lowers it.
+    const MOODS = {
+      calm: [0.95, -0.02, 0.9], normal: [1, 0, 1], excited: [1.07, 0.08, 1], hype: [1.13, 0.16, 1], tense: [1.05, 0.05, 1], sad: [0.9, -0.1, 0.9],
+    };
+    const [r, p, v] = MOODS[item.mood] || MOODS.normal;
+    u.rate = clamp(((this.settings.voiceRate ?? 100) / 100) * r, 0.6, 1.6);
+    u.pitch = clamp((this.settings.voiceGender === 'female' ? 1.05 : 0.95) + p, 0.5, 1.6);
+    u.volume = clamp(this.level('voice') * v, 0, 1);
     const gen = this.voiceGen;
     let done = false;
     const finish = () => {

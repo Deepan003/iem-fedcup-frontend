@@ -6,9 +6,18 @@ import { previewVoice } from '../../components/Sound.jsx';
 import { useAdmin } from './AdminApp.jsx';
 
 const SLOTS = [
-  ['intro', 'Intro music', 'Plays once when the auction starts.'],
-  ['bed', 'Background music', 'Loops quietly during the auction; dips while bidding and under the announcer.'],
-  ['sold', 'Sold sting', 'Plays on every sale. Without it, a built-in "sold" sound is used.'],
+  ['intro', 'Intro music', 'Plays when the auction starts, for the length set above, then fades out.'],
+  ['bed', 'Background music', 'Loops quietly after the intro; dips while bidding and under the announcer.'],
+  ['sold', 'Sold sting', 'Plays on every sale. Without it, a built-in stadium "sold" hit is used.'],
+  ['end', 'Full-time music', 'Plays when the auction ends.'],
+];
+/* Short effects: each replaces the built-in sound when uploaded (keep them 0.2–3 seconds). */
+const EFFECTS = [
+  ['bid', 'Bid sound', 'Every new bid.'],
+  ['newPlayer', 'New player', 'A player comes to the block.'],
+  ['hammer', 'Hammer / gavel', 'The moment of a sale.'],
+  ['record', 'New record', 'A new auction record.'],
+  ['unsold', 'Unsold', 'A player goes unsold.'],
 ];
 
 function Slider({ label, value, min = 0, max = 100, suffix = '%', onChange }) {
@@ -54,6 +63,7 @@ export default function AudioSettings({ value, tracks = {}, onSave }) {
       <Toggle label="Captains" hint="Bid ticks, timer beeps and an outbid alert (with vibration on Android)." checked={v.captainSound} onChange={set('captainSound')} />
       <Toggle label="Crowd ambience & cheers" checked={v.crowd} onChange={set('crowd')} />
       <Toggle label="Music" hint="Uses the tracks below." checked={v.music} onChange={set('music')} />
+      <Slider label="Intro music length" value={v.introSeconds ?? 25} min={0} max={120} suffix={v.introSeconds ? 's' : ' (full)'} onChange={set('introSeconds')} />
 
       <h3 className="aud-h">Announcer</h3>
       <Toggle label="Announcer voice" hint='"Next up…", bid calls, "Sold to … for …!"' checked={v.voice} onChange={set('voice')} />
@@ -89,7 +99,8 @@ export default function AudioSettings({ value, tracks = {}, onSave }) {
 
       <h3 className="aud-h">Music tracks</h3>
       <p className="muted small" style={{ margin: 0 }}>MP3, M4A, OGG or WAV, under 10 MB each. Use music you have the rights to play.</p>
-      {SLOTS.map(([slot, label, hint]) => {
+      {[...SLOTS, ['__fx'], ...EFFECTS].map(([slot, label, hint]) => {
+        if (slot === '__fx') return <h3 key="fx" className="aud-h">Sound effects (optional, your own clips)</h3>;
         const t = tracks[slot];
         return (
           <div key={slot} className="aud-track">

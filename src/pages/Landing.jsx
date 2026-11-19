@@ -13,6 +13,7 @@ import Shader from '../components/Shader.jsx';
 import { Magnetic, RollingNumber } from '../components/fx.jsx';
 import { MiniPlayer, PlayerCard, TeamLogo } from '../components/ui.jsx';
 import '../football.css';
+import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
@@ -349,7 +350,8 @@ export default function Landing() {
   }, []);
 
   // Live: stats, the "on air" banner, teams and players follow the auction in real time.
-  const { state: liveState } = useAuction();
+  const { state: liveState, now: liveNow } = useAuction();
+  const snd = useAuctionSound(liveState, liveNow, { surface: 'studio' }); // the live show is heard here too
   const statsKey = liveState ? JSON.stringify(liveState.stats) : '';
   useEffect(() => {
     if (!liveState) return;
@@ -761,6 +763,7 @@ export default function Landing() {
         </div>
         <div className="footer-word" aria-hidden="true">Fed Cup</div>
       </footer>
+      {liveState?.status === 'live' && <SoundDock state={liveState} sound={snd} surface="studio" />}
     </main>
   );
 }
