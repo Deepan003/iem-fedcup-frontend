@@ -20,7 +20,7 @@ function StorageMeter({ call, refreshKey }) {
 
   const pct = s ? Math.min(100, s.percent) : 0;
   const color = pct >= 85 ? 'var(--danger)' : pct >= 65 ? 'var(--amber)' : 'var(--go)';
-  const others = s ? s.databases.filter((d) => !d.current && d.bytes > 0) : [];
+  const shared = s?.cluster && s.cluster.otherDatabases > 0;
   return (
     <div className="card stack" style={{ marginBottom: 14 }}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -38,12 +38,18 @@ function StorageMeter({ call, refreshKey }) {
           <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
             <div><span className="label">Auction data ({s.auction.database})</span><div><b>{mb(s.auction.bytes)}</b></div></div>
             <div><span className="label">Player photos & logos</span><div><b>{mb(s.images.bytes)}</b> <span className="muted small">· {s.images.count} files{s.images.storedIn === 'r2' ? ' (new uploads go to R2)' : ''}</span></div></div>
-            {others.map((d) => <div key={d.name}><span className="label">Other: {d.name}</span><div><b>{mb(d.bytes)}</b></div></div>)}
+            {shared && <div><span className="label">Other apps on this database server</span><div><b>{mb(s.cluster.otherBytes)}</b> <span className="muted small">· {s.cluster.otherDatabases} database{s.cluster.otherDatabases === 1 ? '' : 's'}, not FED Cup</span></div></div>}
           </div>
-          {others.some((d) => d.name.startsWith('sample_')) && (
+          {s.cluster?.hasSampleData && (
             <p className="muted small" style={{ margin: 0 }}>The <b>sample_</b> databases are MongoDB's demo data and are not used by the auction. Delete them in Atlas → Browse collections to free space.</p>
           )}
-          {pct >= 85 && <p className="small" style={{ color: 'var(--danger)', margin: 0 }}>Storage is nearly full. Delete sample data or old photos before importing more.</p>}
+          {pct >= 85 && (
+            <p className="small" style={{ color: 'var(--danger)', margin: 0 }}>
+              {shared
+                ? `The database server is nearly full, mostly from other apps (FED Cup uses ${mb(s.auction.bytes)}). If it fills up, the auction cannot save bids. Ask the database admin to free space or upgrade the cluster before the event.`
+                : 'Storage is nearly full. Delete sample data or old photos before importing more.'}
+            </p>
+          )}
         </>
       )}
     </div>
