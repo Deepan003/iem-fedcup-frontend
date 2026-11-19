@@ -5,6 +5,7 @@ import { money, POSITIONS, initials, setMoneyDecimals,
 } from '../lib/format.js';
 import { Spinner, TeamLogo } from '../components/ui.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
+import CardStudio, { cardInfo } from '../components/CardStudio.jsx';
 
 const STATUS = {
   sold: 'Sold', retained: 'Retained', unsold: 'Unsold', available: 'In the pool',
@@ -38,6 +39,7 @@ export default function Portal() {
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [pos, setPos] = useState('All');
+  const [cardFor, setCardFor] = useState(null); // player whose card is open
 
   useEffect(() => {
     api('/config').then((c) => { setMoneyDecimals(c.decimals); setConfig(c); }).catch(() => setError('Could not reach the server.'));
@@ -127,13 +129,17 @@ export default function Portal() {
                     {p.price != null && <span className="tiny" style={{ color: 'var(--bone)' }}>{money(p.price, config.currency)}</span>}
                   </div>
                 </div>
-                <span className={`stamp ${p.status}`}>{STATUS[p.status] || p.status}</span>
+                <span className="row" style={{ gap: 8 }}>
+                  {config.cardsEnabled && <button type="button" className="btn sm card-btn" onClick={() => setCardFor(p)}>🃏 Card</button>}
+                  <span className={`stamp ${p.status}`}>{STATUS[p.status] || p.status}</span>
+                </span>
               </div>
             );
           })}
         </div>
       )}
       {live?.status === 'live' && <SoundDock state={live} sound={snd} surface="studio" />}
+      {cardFor && <CardStudio info={cardInfo(cardFor, cardFor.teamId ? teamMap[cardFor.teamId] : null, config.currency)} onClose={() => setCardFor(null)} />}
     </main>
   );
 }

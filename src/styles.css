@@ -786,3 +786,13 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
   body.print-squad .pitch { max-width: 520px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body.print-squad .bench-row { color: #000; }
 }
+
+/* ---------- player card studio ---------- */
+.card-studio { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 20px; background: rgba(4, 4, 5, 0.86); backdrop-filter: blur(8px); animation: fade-up 0.3s var(--ease) both; overflow: auto; }
+.cs-inner { display: grid; grid-template-columns: minmax(0, auto) minmax(220px, 300px); gap: 28px; align-items: center; max-width: 1000px; }
+.cs-canvas { width: min(56vh, 520px, 86vw); height: auto; aspect-ratio: 1080 / 1350; border-radius: 10px; box-shadow: 0 40px 120px -30px #000, 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.cs-side { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.cs-side h2 { margin: 0; font-size: clamp(30px, 4vw, 52px); line-height: 0.92; }
+.cs-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.card-btn { white-space: nowrap; }
+@media (max-width: 760px) { .cs-inner { grid-template-columns: 1fr; justify-items: center; } .cs-side { align-items: center; text-align: center; } }

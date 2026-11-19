@@ -255,11 +255,12 @@ export default function SettingsAdmin({ ChangePassword, onAuthChange }) {
           <ScreensSettings key={JSON.stringify({ ...s.screens, forceOn: undefined })} value={s.screens} onSave={save} />
           <div className="card stack">
             <h2>Player portal</h2>
-            <select className="input" value={s.portal.mode} onChange={(e) => save('portal', { mode: e.target.value })}>
+            <select className="input" value={s.portal.mode} onChange={(e) => save('portal', { ...s.portal, mode: e.target.value })}>
               <option value="public">Public: anyone can search</option>
               <option value="code">Private: needs an access code</option>
               <option value="off">Closed</option>
             </select>
+            <Toggle label="Player cards download" hint="Adds a Card button on the players page: preview and download any player's card (PNG, JPG or animated). Switch on after the auction." checked={!!s.portal.cards} onChange={(v) => save('portal', { ...s.portal, cards: v })} />
             <Field label="Access code (for private mode)"><input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Set a new code" /></Field>
             <button type="button" className="btn" style={{ alignSelf: 'flex-start' }} disabled={code.length < 4} onClick={() => run(async () => { await call('/admin/portal-code', { method: 'PUT', body: { code } }); setCode(''); }, 'Code saved')}>Save code</button>
           </div>
