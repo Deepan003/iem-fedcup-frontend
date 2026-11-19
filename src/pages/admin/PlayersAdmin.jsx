@@ -8,11 +8,13 @@ import {
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
+import PhotoAdjust, { storedPhoto } from '../../components/PhotoAdjust.jsx';
 
 const STATUSES = ['all', 'available', 'sold', 'unsold', 'retained', 'withheld'];
 
 function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
-  const { call } = useAdmin();
+  const { call, token } = useAdmin();
+  const [adjust, setAdjust] = useState(null); // photo framing: { source }
   const ask = useConfirm();
   const [run, busy] = useAction();
   const [edit, setEdit] = useState(null);
@@ -42,8 +44,10 @@ function Row({ p, tiers, teamName, currency, selected, onSelect, onSaved }) {
       <td>
         <label style={{ cursor: 'pointer' }} title={p.photoError || 'Upload photo'}>
           {p.thumbUrl ? <img className="thumb" src={assetUrl(p.thumbUrl)} alt="" loading="lazy" /> : <span className="thumb" style={{ color: p.photoError ? '#fca5a5' : undefined }}>{p.photoError ? '⚠' : '+'}</span>}
-          <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && photo(e.target.files[0])} />
+          <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) setAdjust({ source: f }); }} />
         </label>
+        {p.thumbUrl && <button type="button" className="ret-adjust inline" title="Adjust photo" aria-label={`Adjust ${p.name}'s photo`} onClick={() => setAdjust({ source: storedPhoto(p.id, token) })}>⤢</button>}
+        {adjust && <PhotoAdjust source={adjust.source} title={p.name} onApply={async (f) => photo(f)} onClose={() => setAdjust(null)} />}
       </td>
       {edit ? (
         <>

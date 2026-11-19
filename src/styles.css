@@ -665,3 +665,9 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
 }
 /* Scrolled nav: near-solid so big headings never show through behind the logo. */
 .nav.solid { background: rgba(11, 11, 12, 0.97); }
+/* Squad cards: how each team is shaping up, by position */
+.sq-tally { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em; color: var(--dim); }
+.sq-tally span { padding: 3px 7px; border: 1px solid var(--rule-2); border-radius: 2px; }
+.sq-tally span.on { color: var(--bone); border-color: color-mix(in srgb, var(--c) 55%, var(--rule-2)); }
+.sq-tally b { font-weight: 600; }
+.sq-tally .sq-total { margin-left: auto; border: 0; padding: 0; text-transform: uppercase; }

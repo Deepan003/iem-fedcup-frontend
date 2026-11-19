@@ -129,3 +129,10 @@
 .link-row.warn .link-url { color: #fca5a5; }
 .link-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 600px) { .link-row { flex-wrap: wrap; } .link-actions { width: 100%; justify-content: flex-start; padding-left: 48px; } }
+/* Retained / player photo preview and re-frame buttons */
+.ret-photo-wrap { position: relative; display: inline-block; }
+.ret-adjust { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; display: grid; place-items: center; padding: 0; border: 1px solid var(--rule-2); border-radius: 50%; background: var(--ink-2, #141416); color: var(--bone); font-size: 12px; cursor: pointer; }
+.ret-adjust:hover { border-color: var(--signal); }
+.ret-adjust.inline { position: static; margin-top: 4px; }
+.ret-pick { display: inline-flex; align-items: center; gap: 8px; }
+.ret-pick img { width: 48px; height: 60px; object-fit: cover; border-radius: 2px; border: 1px solid var(--rule-2); }

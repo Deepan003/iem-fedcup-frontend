@@ -29,3 +29,16 @@
   .la-body { grid-template-columns: 1fr; }
   .la-stage { width: min(260px, 100%); height: auto; aspect-ratio: 1; margin: 0 auto; }
 }
+
+/* Player photo framing (portrait 4:5) */
+.pa-stage { width: 240px; height: 300px; background: #0c0c0e; }
+.pa-stage img.pa-img, .pa-card img, .pa-thumb img { position: absolute; left: 50%; top: 50%; max-width: none; object-fit: fill; pointer-events: none; }
+.pa-thirds { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(to right, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.14) 33.33%, transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.14) 66.66%, transparent calc(66.66% + 0.5px)),
+  linear-gradient(to bottom, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.14) 33.33%, transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.14) 66.66%, transparent calc(66.66% + 0.5px)); }
+.pa-preview { display: flex; align-items: flex-end; gap: 14px; padding: 14px; background: var(--bg-2, #111114); border: 1px solid var(--rule-2); border-radius: 2px; }
+.pa-card { position: relative; width: 120px; height: 150px; overflow: hidden; border-radius: 4px; background: #0c0c0e; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 14px 30px -12px rgba(0, 0, 0, 0.8); }
+.pa-card::after { content: ''; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, rgba(0, 0, 0, 0.75)); }
+.pa-thumb { position: relative; width: 48px; height: 60px; overflow: hidden; border-radius: 2px; background: #0c0c0e; }
+/* The crop maths assume exactly 240×300: keep it on phones too (it fits every phone). */
+@media (max-width: 640px) { .la-stage.pa-stage { width: 240px; height: 300px; aspect-ratio: auto; margin: 0 auto; } }

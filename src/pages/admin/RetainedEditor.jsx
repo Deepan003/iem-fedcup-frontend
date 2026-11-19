@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { assetUrl } from '../../lib/api.js';
 import { money, POSITIONS, POS_SHORT, initials } from '../../lib/format.js';
 import { Field, useAction } from '../../components/ui.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import PhotoAdjust, { storedPhoto } from '../../components/PhotoAdjust.jsx';
 
 const blank = {
   playerId: '', name: '', position: 'Midfielder', department: '', year: '', price: '', isCaptain: false,
@@ -17,11 +18,16 @@ function photoForm(file) {
 
 /** Captain + retained players of one team: add, edit, photo, remove. Prices come off the purse. */
 export default function RetainedEditor({ team, liveTeam, players, currency, onSaved }) {
-  const { call } = useAdmin();
+  const { call, token } = useAdmin();
   const ask = useConfirm();
   const [run, busy] = useAction();
   const [form, setForm] = useState(blank);
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState(null); // framed file to upload with the new player
+  const [photoOrig, setPhotoOrig] = useState(null); // the original pick, so it can be re-framed
+  const [adjust, setAdjust] = useState(null); // { source, title, onApply }
+  const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
+  useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl); }, [photoUrl]);
+  const uploadFor = (id) => (file) => run(async () => { await call(`/admin/players/${id}/photo`, { method: 'POST', form: photoForm(file) }); onSaved(); }, 'Photo updated');
   const [editing, setEditing] = useState(null); // { id, ...fields }
 
   const members = (liveTeam?.squad || []).filter((p) => p.retained)
@@ -38,6 +44,7 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
     if (photo) await call(`/admin/players/${r.playerId}/photo`, { method: 'POST', form: photoForm(photo) });
     setForm(blank);
     setPhoto(null);
+    setPhotoOrig(null);
     onSaved();
   }, form.isCaptain ? 'Captain added' : 'Retained player added');
 
@@ -71,10 +78,13 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
           </div>
         ) : (
           <div key={p.id} className="ret-row">
-            <label className="ret-photo" title="Change photo">
-              {p.thumbUrl ? <img src={assetUrl(p.thumbUrl)} alt="" /> : <span>{initials(p.name)}</span>}
-              <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && run(async () => { await call(`/admin/players/${p.id}/photo`, { method: 'POST', form: photoForm(e.target.files[0]) }); onSaved(); }, 'Photo updated')} />
-            </label>
+            <span className="ret-photo-wrap">
+              <label className="ret-photo" title="Change photo">
+                {p.thumbUrl ? <img src={assetUrl(p.thumbUrl)} alt="" /> : <span>{initials(p.name)}</span>}
+                <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) setAdjust({ source: f, title: p.name, onApply: uploadFor(p.id) }); }} />
+              </label>
+              {p.thumbUrl && <button type="button" className="ret-adjust" title="Adjust photo" aria-label={`Adjust ${p.name}'s photo`} onClick={() => setAdjust({ source: storedPhoto(p.id, token), title: p.name, onApply: uploadFor(p.id) })}>⤢</button>}
+            </span>
             <div className="grow" style={{ minWidth: 0 }}>
               <b className="ellipsis" style={{ display: 'block' }}>{p.name} {p.isCaptain && <span className="cap-badge">C</span>}</b>
               <span className="tiny">{POS_SHORT[p.position]}{p.department ? ` · ${p.department}` : ''}{p.year ? ` · ${p.year}` : ''}</span>
@@ -102,12 +112,23 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
           <Field label="Department"><input className="input" value={form.department} onChange={set('department')} placeholder="e.g. CSE" /></Field>
           {!form.playerId && <Field label="Year"><input className="input" value={form.year} onChange={set('year')} placeholder="e.g. 3rd" /></Field>}
           {!form.isCaptain && <Field label={`Retention price (${currency})`}><input className="input" inputMode="numeric" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })} /></Field>}
-          <Field label="Photo (optional)"><input className="input" type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0] || null)} style={{ padding: 8 }} /></Field>
+          <Field label="Photo (optional)">
+            {photo ? (
+              <span className="ret-pick">
+                <img src={photoUrl} alt="Photo preview" />
+                <button type="button" className="btn sm" onClick={() => setAdjust({ source: photoOrig || photo, title: form.name || 'New player', onApply: (f) => setPhoto(f) })}>Adjust</button>
+                <button type="button" className="btn sm ghost" onClick={() => { setPhoto(null); setPhotoOrig(null); }} aria-label="Remove photo">✕</button>
+              </span>
+            ) : (
+              <input className="input" type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) { setPhotoOrig(f); setAdjust({ source: f, title: form.name || 'New player', onApply: (out) => setPhoto(out) }); } }} style={{ padding: 8 }} />
+            )}
+          </Field>
         </div>
         <button type="button" className="btn sm primary" style={{ marginTop: 12 }} disabled={busy || (!form.playerId && !form.name) || (!form.isCaptain && form.price === '')} onClick={add}>
           {form.isCaptain ? 'Add captain' : 'Add retained player'}
         </button>
       </div>
+      {adjust && <PhotoAdjust source={adjust.source} title={adjust.title} onApply={adjust.onApply} onClose={() => setAdjust(null)} />}
     </div>
   );
 }

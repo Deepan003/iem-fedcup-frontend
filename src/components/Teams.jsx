@@ -44,6 +44,15 @@ export function SquadCard({ team, currency }) {
         </div>
         {team.purse !== undefined && <span className="amt" style={{ fontSize: 26 }}>{Number(team.purse).toLocaleString('en-IN')}</span>}
       </div>
+      {team.squad && (
+        <div className="sq-tally" aria-label="Squad by position">
+          {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((pos) => {
+            const n = team.squad.filter((p) => p.position === pos).length;
+            return <span key={pos} className={n ? 'on' : ''}>{POS_SHORT[pos]} <b>{n}</b></span>;
+          })}
+          <span className="sq-total">{team.squad.length}{team.slotsLeft != null ? `/${team.squad.length + team.slotsLeft}` : ''} players</span>
+        </div>
+      )}
       {team.squad ? (
         <div className="squad-list">
           {team.squad.length === 0 && <span className="tiny" style={{ paddingTop: 8 }}>No players yet</span>}
