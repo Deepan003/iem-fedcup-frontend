@@ -151,7 +151,7 @@ export default function PlayersAdmin() {
   if (!players) return <Spinner />;
   const counts = POSITIONS.map((p) => `${POS_SHORT[p]} ${players.filter((x) => x.position === p).length}`).join(' · ');
   const missingPhotos = players.filter((p) => !p.thumbUrl).length;
-  const tierCounts = tiers.map((t) => `${t.name} ${players.filter((p) => p.tierMatched && p.tier.trim().toLowerCase() === t.name.trim().toLowerCase()).length}`).join(' · ');
+  const tierCounts = tiers.map((t) => `${t.name} ${players.filter((p) => (p.tierName || (p.tierMatched ? p.tier : null)) === t.name).length}`).join(' · ');
   const noTier = players.filter((p) => !p.tierMatched && p.basePrice == null && !['sold', 'retained'].includes(p.status));
 
   return (
