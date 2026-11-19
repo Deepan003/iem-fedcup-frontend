@@ -879,3 +879,34 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
   .cap-side { position: static; max-height: none; overflow: visible; }
 }
 .cs-list { max-height: none; overflow: visible; }
+
+/* ---------- captain room: really use the whole screen ---------- */
+@media (min-width: 1240px) {
+  .container.cap-wide { width: min(1760px, 100% - 2 * var(--pad)); max-width: none; }
+  .studio.cap-wide { gap: 14px; padding-top: 72px !important; }
+  .cap-wide .cap-head { padding: 6px 0; }
+  .cap-wide .cap-head .display { font-size: 26px !important; }
+  .cap-wide .cap-progress { margin: 0; }
+  .cap-left { display: flex; flex-direction: column; }
+  .cap-left .cs-list { order: 2; } /* your players right under the purse */
+  .cap-left .cs-block:not(.cs-list):nth-of-type(2) { order: 3; }
+  .cs-row { padding: 3px 0; }
+}
+/* wide screens: the left panel splits in two so the whole squad is visible at once */
+@media (min-width: 1560px) {
+  .cap-grid { grid-template-columns: 560px minmax(0, 1fr) 330px; }
+  .cap-left { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+  .cap-left .cs-list { grid-column: 2; grid-row: 1 / span 3; }
+  .cap-left .cs-block:not(.cs-list) { grid-column: 1; }
+}
+@media (min-width: 1240px) {
+  .cs-list .cs-row { padding: 2px 0; grid-template-columns: 24px minmax(0, 1fr) auto auto; }
+  .cs-list .avatar { width: 24px !important; height: 24px !important; }
+  .cs-list .cs-row .ellipsis { font-size: 13px; }
+}
+/* rivals in the side panel: logo | name + leading tag | max bid on the second line */
+.cap-side .rival { grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-rows: auto auto; }
+.cap-side .rival .team-logo { grid-row: 1 / 3; }
+.cap-side .rival b { grid-column: 2; }
+.cap-side .rival .rival-tag { grid-column: 3; grid-row: 1; align-self: center; }
+.cap-side .rival .mono { grid-column: 2 / 4; }
