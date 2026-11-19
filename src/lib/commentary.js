@@ -121,6 +121,20 @@ const L = {
     (v) => `Sold at the base price! ${v.p} to ${v.t}, ${v.a}. That's a bargain!`, (v) => `A steal! ${v.t} get ${v.p} for just ${v.a}!`,
     (v) => `Sold! ${v.p} to ${v.t} at ${v.a}. Smart buy!`, (v) => `No competition! ${v.t} take ${v.p} for ${v.a}.`,
   ],
+  // position records: rank 1 / 2 / 3 at a position (said calmly, a little after the sale)
+  posRank1: [
+    (v) => `That makes ${v.p} the most expensive ${v.pos} so far.`,
+    (v) => `A new high for a ${v.pos}! ${v.p} tops the list.`,
+    (v) => `No ${v.pos} has gone for more. ${v.p} leads the way.`,
+  ],
+  posRank2: [
+    (v) => `${v.p} is now the second most expensive ${v.pos}.`,
+    (v) => `Second highest price for a ${v.pos} so far.`,
+  ],
+  posRank3: [
+    (v) => `${v.p} goes in at number three among the ${v.pos}s.`,
+    (v) => `That's the third biggest price for a ${v.pos}.`,
+  ],
   record: [
     () => "That's a new auction record!", () => 'History made! A brand new auction record!', () => 'Unbelievable! A new record!',
     () => 'Record broken! Nobody has gone higher!', () => 'The most expensive player of the auction!', () => 'A new record! Remember this moment!',

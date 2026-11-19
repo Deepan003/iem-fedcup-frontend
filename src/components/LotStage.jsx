@@ -181,7 +181,7 @@ export default function LotStage({ state, now, showHistory = true, children }) {
         <div className="meta-row">
           <div><span className="tiny">Pos</span><b>{POS_SHORT[p.position] || '—'}</b></div>
           <div><span className="tiny">Year</span><b>{p.year || '—'}</b></div>
-          {p.tier && <div><span className="tiny">Tier</span><b style={{ color: p.tierColor || undefined }}>{p.tier}</b></div>}
+          {p.tier && <div className="meta-tier"><span className="tiny">Tier</span><b className="tier-pill" style={{ '--tc': p.tierColor || 'var(--amber)' }}>{p.tier}</b></div>}
           <div><span className="tiny">Base</span><b>{money(lot.base, state.currency)}</b></div>
         </div>
 

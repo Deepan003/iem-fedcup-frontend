@@ -11,6 +11,7 @@ import { BrandMark } from '../components/Nav.jsx';
 import TeamReveal from '../components/TeamReveal.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 import Screensaver from '../components/Screensaver.jsx';
+import { AuctionProgress, PositionAnnounce, RankList } from '../components/Live.jsx';
 
 function Clock() {
   const [t, setT] = useState(() => new Date());
@@ -42,7 +43,7 @@ export default function Studio() {
           {live ? <span><span className="on-air">On air</span></span> : <span className="muted">{state?.status === 'ended' ? 'Full time' : 'Pre-match'}</span>}
           <span className="sb-title"><span className="ellipsis">{state?.studio.title || 'IEM FED Cup Auction'}</span></span>
           {state && <span className="hide-sm">Round {state.round}</span>}
-          {state && <span className="hide-sm">{state.stats.sold} sold · {state.stats.available} left</span>}
+          {state && <span className="hide-sm">{state.stats.sold} sold · {state.stats.pool ? `${state.stats.pool.left} of ${state.stats.pool.total}` : state.stats.available} left</span>}
           {viewers?.total != null && <span>{viewers.total} watching</span>}
           {state?.status === 'ended' && <span><button type="button" className="btn sm primary" onClick={() => setShowReveal(true)}>▶ Team reveal</button></span>}
           {!connected ? <span style={{ color: 'var(--amber)' }}>Reconnecting</span> : <span className="hide-sm"><Clock /></span>}
@@ -56,6 +57,12 @@ export default function Studio() {
           <div className="studio-grid">
             <LotStage state={state} now={now} />
             <aside className="stack" style={{ gap: 28 }}>
+              {state.stats.pool && (
+                <div className="side-block">
+                  <div className="label" style={{ marginBottom: 8 }}>Still to come</div>
+                  <AuctionProgress state={state} />
+                </div>
+              )}
               <div className="side-block">
                 <div className="label" style={{ marginBottom: 6 }}>Latest sales</div>
                 {state.recentSales.length === 0 && <div className="tiny" style={{ padding: '10px 0' }}>No sales yet</div>}
@@ -73,13 +80,16 @@ export default function Studio() {
               {state.stats.topBuys.length > 0 && (
                 <div className="side-block">
                   <div className="label" style={{ marginBottom: 6 }}>Top buys</div>
-                  {state.stats.topBuys.map((b, i) => (
-                    <div key={b.playerId} className="sale-row">
-                      <Avatar player={b} team={teamById(state, b.teamId)} size={34} />
-                      <span className="ellipsis small"><span className="idx" style={{ fontSize: 12, marginRight: 6 }}>{String(i + 1).padStart(2, '0')}</span>{b.name}</span>
-                      <b>{money(b.price, state.currency)}</b>
-                    </div>
-                  ))}
+                  <RankList
+                    items={state.stats.topBuys.map((b) => ({ ...b, id: b.playerId }))}
+                    render={(b, i, badge) => (
+                      <div className="sale-row">
+                        <Avatar player={b} team={teamById(state, b.teamId)} size={34} />
+                        <span className="ellipsis small"><span className="idx" style={{ fontSize: 12, marginRight: 6 }}>{String(i + 1).padStart(2, '0')}</span>{b.name}{badge}</span>
+                        <b>{money(b.price, state.currency)}</b>
+                      </div>
+                    )}
+                  />
                 </div>
               )}
             </aside>
@@ -114,6 +124,7 @@ export default function Studio() {
       )}
       {state?.status === 'ended' && showReveal && <TeamReveal state={state} onClose={() => setShowReveal(false)} />}
       <Screensaver state={state} />
+      {state && <PositionAnnounce state={state} />}
       <SoldOverlay state={state} />
       <SoundDock state={state} sound={snd} surface="studio" big={screen} gate />
     </div>

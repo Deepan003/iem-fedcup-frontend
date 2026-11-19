@@ -204,6 +204,19 @@ export function useAuctionSound(state, now, { surface, teamId = null } = {}) {
         if (record) {
           setTimeout(() => sound.chime(), 900);
           sound.say(line('record'), 'info', 'hype');
+        } else {
+          // calmly, a little later: "the most expensive defender so far" (or 2nd / 3rd)
+          const top = state.stats?.topByPosition?.[pl.position] || [];
+          const rank = top.findIndex((x) => x.playerId === lot.playerId) + 1;
+          const POSW = {
+            Goalkeeper: 'goalkeeper', Defender: 'defender', Midfielder: 'midfielder', Forward: 'striker',
+          };
+          if (rank > 0 && POSW[pl.position]) {
+            const seq = s.seq;
+            setTimeout(() => {
+              if (prev.current?.seq === seq) sound.say(line(`posRank${rank}`, { p: pl.name, pos: POSW[pl.position] }), 'info', rank === 1 ? 'excited' : 'normal');
+            }, 4200);
+          }
         }
         if (teamId && s.leaderId === teamId) sound.leading();
       }

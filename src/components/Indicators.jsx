@@ -59,16 +59,20 @@ export default function Indicators({ state, now }) {
     const x = lot.amount / lot.base;
     if (x >= 1.5) tags.push({ k: 'x', text: `${x.toFixed(1)}× base price`, tone: x >= 3 ? 'hot' : '' });
   }
+  // A record is "this player's" if the bid beats it now, or if this player already set it (after the sale
+  // the record *is* this price, so a plain ">" check would flip back to "top so far" — the old flicker).
+  const holds = (r) => !!r && lot.amount != null && (lot.amount > r.price || r.playerId === lot.playerId);
   if (recAll) {
-    if (lot.amount != null && lot.amount > recAll.price) tags.push({ k: 'rec', text: 'New auction record', tone: 'gold' });
-    else if (live) tags.push({ k: 'rec', text: `${money(recAll.price - amount + 1 > 0 ? recAll.price - amount + 1 : 0, cur)} more beats the record (${money(recAll.price, cur)}, ${recAll.name})` });
+    if (holds(recAll)) tags.push({ k: 'rec', text: 'New auction record', tone: 'gold' });
+    else if (live) tags.push({ k: 'rec', text: `Record to beat: ${money(recAll.price, cur)} (${recAll.name})` });
   }
   if (recPos && pos) {
-    if (lot.amount != null && lot.amount > recPos.price) tags.push({ k: 'pos', text: `Highest ${pos.toLowerCase()} so far`, tone: 'gold' });
+    if (holds(recPos)) tags.push({ k: 'pos', text: `Highest ${pos.toLowerCase()} so far`, tone: 'gold' });
     else tags.push({ k: 'pos', text: `Top ${pos.toLowerCase()} so far: ${money(recPos.price, cur)} (${recPos.name})` });
   }
   if (recTier && tier) {
-    if (!(lot.amount != null && lot.amount > recTier.price)) tags.push({ k: 'tier', text: `Top ${tier} buy: ${money(recTier.price, cur)}` });
+    if (holds(recTier)) tags.push({ k: 'tier', text: `Highest ${tier} buy so far`, tone: 'gold' });
+    else tags.push({ k: 'tier', text: `Top ${tier} buy: ${money(recTier.price, cur)}` });
   }
   const t = now ? now() : Date.now();
   const recent = (lot.history || []).filter((h) => t - h.at < 20_000);

@@ -215,17 +215,48 @@ function CaptainRoom({ auth, onLogout }) {
   else if (lot.nextAmount > (state.me?.maxBidForLot ?? 0)) reason = `Max you can bid: ${money(state.me?.maxBidForLot, state.currency)}`;
   const leading = lot?.leaderId === auth.team.id && ['bidding', 'awaiting'].includes(lot?.phase);
 
+  // When the price moves, hold the button for a beat (so nobody taps a price they haven't seen)
+  const nextAmt = lot?.nextAmount;
+  const [bumped, setBumped] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const firstAmt = useRef(true);
+  useEffect(() => {
+    if (firstAmt.current) { firstAmt.current = false; return undefined; }
+    if (nextAmt == null) return undefined;
+    setBumped(true);
+    const t = setTimeout(() => setBumped(false), 450);
+    return () => clearTimeout(t);
+  }, [nextAmt]);
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(null), 2800);
+    return () => clearTimeout(t);
+  }, [notice]);
+  useEffect(() => { setNotice(null); }, [lot?.seq]);
+
   const placeBid = async () => {
-    if (!lot || pending) return;
+    if (!lot || pending || bumped) return;
     setPending(true);
     navigator.vibrate?.(25);
     const res = await emit('bid', { lotSeq: lot.seq, amount: lot.nextAmount });
     setPending(false);
     if (res?.lot) mergeLot(res.lot, res.v);
-    if (!res?.ok) toast(explain(res?.code), 'error');
+    if (!res?.ok) {
+      if (res?.code === 'STALE_AMOUNT') {
+        // a race, not a mistake: someone bid a split second earlier
+        navigator.vibrate?.([40, 40, 40]);
+        setNotice(`Beaten to it by a split second. Price is now ${money(res?.lot?.amount ?? lot.amount, state.currency)}.`);
+      } else toast(explain(res?.code), 'error');
+    } else setNotice(null);
   };
 
   const others = state.teams.filter((t) => t.id !== auth.team.id);
+  const rivals = lot && ['bidding', 'awaiting', 'reveal'].includes(lot.phase) && others.some((t) => t.maxBid != null)
+    ? others
+      .filter((t) => t.id === lot.leaderId || (t.maxBid ?? 0) >= (lot.nextAmount ?? 0))
+      .sort((a, b) => (b.id === lot.leaderId) - (a.id === lot.leaderId) || (b.maxBid ?? 0) - (a.maxBid ?? 0))
+      .slice(0, 4)
+    : [];
 
   // Live "what's left if this bid wins": the current bid if you lead, else the bid you'd place next
   const purse = me?.purse ?? 0;
@@ -271,15 +302,42 @@ function CaptainRoom({ auth, onLogout }) {
       <LotStage state={state} now={now} showHistory={cv.showBidHistory !== false} />
 
       <div className="bid-bar">
-        <button type="button" className={`bid-btn ${leading ? 'leading' : ''}`} disabled={!!reason || leading || pending} onClick={placeBid}>
-          {leading ? '✓ You lead' : pending ? 'Sending…' : reason || (
-            <>
-              <span className="k">Bid</span>
-              <span className="v"><RollingNumber value={lot.nextAmount} money /> <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{state.currency}</span></span>
-            </>
-          )}
-        </button>
+        {notice && <div className="bid-notice" role="status">{notice}</div>}
+        {leading ? (
+          <div className="bid-btn holding" style={{ '--tc': me?.color }} role="status" aria-live="polite">
+            <span className="hold-ring" aria-hidden="true" />
+            <TeamLogo team={me} size={46} />
+            <span className="hold-text">
+              <span className="k2">Top bid is yours</span>
+              <span className="tiny">Others can still raise it</span>
+            </span>
+            <span className="v"><RollingNumber value={lot.amount} money /> <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{state.currency}</span></span>
+          </div>
+        ) : (
+          <button type="button" className={`bid-btn ${bumped ? 'bumped' : ''}`} disabled={!!reason || pending} onClick={placeBid}>
+            {pending ? 'Sending…' : reason || (
+              <>
+                <span className="k">{bumped ? 'New price' : 'Bid'}</span>
+                <span className="v"><RollingNumber value={lot.nextAmount} money /> <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{state.currency}</span></span>
+              </>
+            )}
+          </button>
+        )}
       </div>
+
+      {rivals.length > 0 && (
+        <div className="rivals" aria-label="Teams that can outbid you">
+          <span className="label">Can outbid you</span>
+          {rivals.map((t) => (
+            <div key={t.id} className={`rival ${t.id === lot.leaderId ? 'lead' : ''}`} style={{ '--tc': t.color }}>
+              <TeamLogo team={t} size={30} />
+              <b className="ellipsis">{t.shortName || t.name}</b>
+              {t.id === lot.leaderId && <span className="rival-tag">Leading</span>}
+              <span className="mono small">max {money(t.maxBid, state.currency)}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="tabs">
         {cv.showSquadBuilder !== false && <button type="button" className={tab === 'squad' ? 'on' : ''} onClick={() => setTab('squad')}>My squad</button>}
