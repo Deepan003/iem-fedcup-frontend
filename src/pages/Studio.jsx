@@ -7,6 +7,7 @@ import { PurseStrip, SquadCard } from '../components/Teams.jsx';
 import { MiniPlayer, Spinner, TeamLogo } from '../components/ui.jsx';
 import { BrandMark } from '../components/Nav.jsx';
 import TeamReveal from '../components/TeamReveal.jsx';
+import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 
 function Clock() {
   const [t, setT] = useState(() => new Date());
@@ -24,6 +25,7 @@ export default function Studio() {
   const {
     state, connected, viewers, now,
   } = useAuction();
+  const snd = useAuctionSound(state, now, { surface: 'studio' });
   const live = state?.status === 'live';
   const [showReveal, setShowReveal] = useState(false);
   useEffect(() => { if (state?.status === 'ended') setShowReveal(true); }, [state?.status]);
@@ -109,6 +111,7 @@ export default function Studio() {
       )}
       {state?.status === 'ended' && showReveal && <TeamReveal state={state} onClose={() => setShowReveal(false)} />}
       <SoldOverlay state={state} />
+      <SoundDock state={state} sound={snd} surface="studio" big={screen} />
     </div>
   );
 }

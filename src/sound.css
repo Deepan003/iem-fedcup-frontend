@@ -1,0 +1,31 @@
+/* Sound dock: floating speaker button + per-device panel (bottom-right, above the SOLD overlay). */
+.snd-dock { position: fixed; right: calc(16px + var(--safe-r, 0px)); bottom: calc(16px + var(--safe-b, 0px)); z-index: 105; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.snd-btn { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--rule-2); background: rgba(14, 14, 16, 0.92); color: var(--dim); cursor: pointer; transition: border-color 0.2s, color 0.2s, transform 0.2s var(--ease); }
+.snd-btn:hover { transform: scale(1.06); color: var(--bone); }
+.snd-btn.on { color: var(--bone); border-color: rgba(227, 18, 63, 0.6); box-shadow: 0 0 0 4px rgba(227, 18, 63, 0.12); }
+
+/* Equaliser bars */
+.snd-wave { display: inline-flex; align-items: flex-end; gap: 3px; height: 16px; }
+.snd-wave i { display: block; width: 3px; height: 100%; background: currentColor; border-radius: 1px; transform-origin: bottom; transform: scaleY(0.35); }
+.snd-wave.live i, .snd-unlock .snd-wave i { animation: snd-eq 0.9s ease-in-out infinite; }
+.snd-wave i:nth-child(2) { animation-delay: 0.15s; }
+.snd-wave i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes snd-eq { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+
+/* "Tap for sound" pill (browsers need one click before any audio) */
+.snd-unlock { display: inline-flex; align-items: center; gap: 10px; padding: 11px 16px; border: 0; border-radius: 999px; cursor: pointer; background: var(--grad-signal); color: #120406; font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; box-shadow: 0 12px 30px -10px rgba(227, 18, 63, 0.7); animation: snd-pulse 2.2s ease-in-out infinite; }
+.snd-dock.big .snd-unlock { padding: 15px 22px; font-size: 13px; }
+@keyframes snd-pulse { 0%, 100% { box-shadow: 0 12px 30px -10px rgba(227, 18, 63, 0.7), 0 0 0 0 rgba(227, 18, 63, 0.45); } 50% { box-shadow: 0 12px 30px -10px rgba(227, 18, 63, 0.7), 0 0 0 10px rgba(227, 18, 63, 0); } }
+
+/* Panel */
+.snd-panel { width: min(300px, calc(100vw - 32px)); padding: 16px; display: flex; flex-direction: column; gap: 12px; background: linear-gradient(180deg, #17171a, #0f0f11); border: 1px solid var(--rule-2); border-radius: 4px; box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.9); animation: snd-in 0.25s var(--ease) both; }
+@keyframes snd-in { from { opacity: 0; transform: translateY(8px); } }
+.snd-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.snd-row b { font-family: var(--display); font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 0.02em; }
+.snd-slider { display: flex; flex-direction: column; gap: 6px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.snd-slider input[type='range'] { accent-color: var(--signal); }
+.snd-slider select { font-size: 13px; padding: 8px; text-transform: none; letter-spacing: 0; }
+.snd-panel input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--signal); }
+
+@media (prefers-reduced-motion: reduce) { .snd-wave i, .snd-unlock { animation: none !important; } }
+@media print { .snd-dock { display: none; } }

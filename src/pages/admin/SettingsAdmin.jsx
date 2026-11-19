@@ -4,6 +4,7 @@ import {
   Field, Spinner, Toggle, useAction,
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import AudioSettings from './AudioSettings.jsx';
 
 const num = (v) => (v === '' || v == null ? '' : Number(v));
 
@@ -207,6 +208,7 @@ export default function SettingsAdmin({ ChangePassword, onAuthChange }) {
               </div>
             )}
           />
+          <AudioSettings key={JSON.stringify(s.audio)} value={s.audio} tracks={auction.state?.audio?.tracks} onSave={save} />
           <div className="card stack">
             <h2>Player portal</h2>
             <select className="input" value={s.portal.mode} onChange={(e) => save('portal', { mode: e.target.value })}>

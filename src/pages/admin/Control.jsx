@@ -8,6 +8,7 @@ import {
 } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 import { useConfirm } from '../../components/Dialog.jsx';
+import { SoundDock, useAuctionSound } from '../../components/Sound.jsx';
 
 /** Quick switch: how many "Up next" players the studio and captains see (Off / 1 / 2 / 3 / 5). */
 function UpNextControl() {
@@ -45,6 +46,7 @@ export default function Control() {
   const {
     state, connected, viewers, now, emit,
   } = auction;
+  const snd = useAuctionSound(state, now, { surface: 'admin' }); // off by default: the auctioneer can monitor
   const toast = useToast();
   const ask = useConfirm();
   const [busy, setBusy] = useState(false);
@@ -240,6 +242,7 @@ export default function Control() {
       <div style={{ marginTop: 14 }}>
         <PurseStrip state={state} />
       </div>
+      <SoundDock state={state} sound={snd} surface="admin" />
     </>
   );
 }

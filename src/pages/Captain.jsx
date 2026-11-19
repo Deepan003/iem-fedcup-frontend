@@ -12,6 +12,7 @@ import {
   Field, MiniPlayer, Spinner, TeamLogo, useAction, useToast,
 } from '../components/ui.jsx';
 import { RollingNumber } from '../components/fx.jsx';
+import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 
 /* --------------------------------- login --------------------------------- */
 function CaptainLogin({ onLogin }) {
@@ -166,6 +167,7 @@ function CaptainRoom({ auth, onLogout }) {
       onLogout();
     },
   });
+  const snd = useAuctionSound(state, now, { surface: 'captain', teamId: auth.team.id });
   const [tab, setTab] = useState('squad');
   const [pending, setPending] = useState(false);
   const [planData, setPlanData] = useState(null);
@@ -288,6 +290,7 @@ function CaptainRoom({ auth, onLogout }) {
       )}
       <div style={{ height: 30 }} />
       <SoldOverlay state={state} />
+      <SoundDock state={state} sound={snd} surface="captain" />
     </main>
   );
 }
