@@ -69,6 +69,17 @@ function buildSlides(state, every = false) {
     if (item === 'retained') {
       for (const t of state.teams) {
         const players = (sc.retained || []).filter((p) => p.teamId === t.id).sort(byPrice);
+        const capKey = (t.captainName || '').trim().toLowerCase();
+        const capIdx = players.findIndex((p) => !p.isCaptain && p.name.trim().toLowerCase() === capKey);
+        if (capKey && capIdx >= 0 && !players.some((p) => p.isCaptain)) {
+          const [c] = players.splice(capIdx, 1);
+          players.unshift({ ...c, isCaptain: true });
+        }
+        if (t.captainName && !players.some((p) => p.isCaptain)) {
+          players.unshift({
+            id: `cap-${t.id}`, name: t.captainName, isCaptain: true, position: t.captainPosition || null, photoUrl: t.captainPhotoUrl, price: 0,
+          });
+        }
         if (players.length) out.push({ kind: 'retained', key: `r-${t.id}`, team: t, players });
       }
     }
@@ -122,27 +133,34 @@ const SPARKS = Array.from({ length: 16 }, (_, i) => ({
 /* ------------------------------ slides ------------------------------ */
 
 function RetainedSlide({ team, players, cur }) {
+  const n = Math.min(players.length, 8);
   return (
-    <div className={`ss-slide ss-retained ${players.length <= 3 ? 'few' : ''}`}>
+    <div className={`ss-slide ss-retained ${n <= 3 ? 'few' : ''}`}>
       <div className="ss-head">
-        <TeamLogo team={team} size={players.length <= 3 ? 120 : 84} />
+        <TeamLogo team={team} size={n <= 3 ? 120 : 84} />
         <div>
           <span className="ss-kicker">Captain &amp; retained</span>
           <h2 className="ss-h">{team.name}</h2>
         </div>
       </div>
-      <div className={`ss-cards n${Math.min(players.length, 6)}`}>
-        {players.slice(0, 8).map((p, i) => (
-          <div key={p.id} className={`ss-card ${p.isCaptain ? 'cap' : ''}`} style={{ animationDelay: `${0.35 + i * 0.16}s`, '--d': `${0.35 + i * 0.16}s` }}>
-            <Photo p={p} />
-            <div className="ss-card-body">
-              {p.isCaptain && <span className="ss-badge">Captain</span>}
-              <b>{p.name}</b>
-              <span className="ss-meta">{[POS_SHORT[p.position], p.department, p.year].filter(Boolean).join(' · ')}</span>
-              <span className="ss-price">{p.isCaptain ? 'Free' : <CountUp value={p.price} cur={cur} delay={600 + i * 160} />}</span>
+      <div className={`ss-rcards n${n}`}>
+        {players.slice(0, 8).map((p, i) => {
+          const url = assetUrl(p.photoUrl || p.thumbUrl);
+          return (
+            <div key={p.id} className={`ss-rcard ${p.isCaptain ? 'cap' : ''}`} style={{ animationDelay: `${0.35 + i * 0.16}s`, '--d': `${0.35 + i * 0.16}s` }}>
+              <div className="ss-rphoto">
+                {url ? <img src={url} alt="" /> : <span className="ss-rini">{initials(p.name)}</span>}
+              </div>
+              {p.position && <span className="ss-rpos">{POS_SHORT[p.position]}</span>}
+              {p.isCaptain && <span className="ss-rarm">Captain</span>}
+              <div className="ss-rinfo">
+                <b>{p.name}</b>
+                {[p.department, p.year].some(Boolean) && <span className="ss-meta">{[p.department, p.year].filter(Boolean).join(' · ')}</span>}
+                <span className="ss-price">{p.isCaptain && !p.price ? 'Free' : <CountUp value={p.price} cur={cur} delay={600 + i * 160} />}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -244,7 +262,12 @@ function TeamSlide({ team, cur }) {
         <div>
           <span className="ss-kicker">Team sheet</span>
           <h2 className="ss-h">{team.name}</h2>
-          {team.captainName && <span className="ss-meta">Captain · {team.captainName}</span>}
+          {team.captainName && (
+            <span className="ss-meta ss-cap">
+              <Avatar player={(team.squad || []).find((p) => p.isCaptain) || { name: team.captainName, photoUrl: team.captainPhotoUrl }} size={34} />
+              Captain · {team.captainName}
+            </span>
+          )}
         </div>
       </div>
       <div className="ss-team-grid">

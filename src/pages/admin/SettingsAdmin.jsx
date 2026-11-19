@@ -163,6 +163,7 @@ function AuctionRules({ value, onSave }) {
 
       <h2 style={{ marginTop: 10 }}>Timers</h2>
       <Toggle label="Use countdown timers" hint="Turn off for fully manual auctions." checked={a.timerEnabled} onChange={set('timerEnabled')} />
+      <Toggle label="Goalkeeper rule" hint="A team that already has a goalkeeper (bought, retained, or a goalkeeper captain) can't bid for another until every team has one." checked={a.gkRule !== false} onChange={set('gkRule')} />
       <Toggle label="Auctioneer must confirm every sale" hint="When the timer ends, bidding closes and waits for you to click Confirm SOLD." checked={a.requireConfirm} onChange={set('requireConfirm')} />
       <Toggle label="Open bidding automatically after the reveal" checked={a.autoOpen} onChange={set('autoOpen')} />
       <div className="form-grid">

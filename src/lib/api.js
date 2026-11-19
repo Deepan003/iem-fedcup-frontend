@@ -37,6 +37,7 @@ const MESSAGES = {
   INVALID_AMOUNT: 'That amount is not allowed.',
   TEAM_FROZEN: 'Your team is frozen by the organisers.',
   SQUAD_FULL: 'Your squad is full.',
+  GK_RULE: 'Goalkeeper rule: you already have a goalkeeper. Wait until every team has one.',
   POSITION_FULL: 'You already have the maximum for this position.',
   POSITION_SLOTS_NEEDED: 'Keep your remaining slots for required positions.',
   OVER_BUDGET: 'Not enough money left.',

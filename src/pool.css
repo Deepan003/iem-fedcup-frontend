@@ -1,0 +1,26 @@
+/* ---------- player pool (A–Z) ---------- */
+.pool { position: fixed; inset: 0; z-index: 135; display: grid; place-items: center; padding: 16px; background: rgba(4, 4, 5, 0.78); backdrop-filter: blur(6px); animation: fade-up 0.25s var(--ease) both; }
+.pool-card { display: flex; flex-direction: column; gap: 10px; width: min(720px, 100%); height: min(86vh, 900px); padding: 18px; background: #101012; border: 1px solid var(--rule-2); box-shadow: 0 40px 100px -30px #000; }
+.pool-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.pool-title { display: block; font-size: 34px; line-height: 1; }
+.pool-search { font-size: 16px; }
+.pool-filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.pool-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.pool-chips button { padding: 6px 10px; border: 1px solid var(--rule-2); background: transparent; color: var(--dim); font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.pool-chips button.on { background: var(--bone); color: var(--ink); border-color: transparent; }
+.pool-az { display: flex; flex-wrap: wrap; gap: 2px; }
+.pool-az button { min-width: 26px; padding: 3px 0; border: 0; background: rgba(255, 255, 255, 0.05); color: var(--bone); font-family: var(--mono); font-size: 11px; font-weight: 700; cursor: pointer; }
+.pool-az button:hover { background: var(--signal); }
+.pool-list { flex: 1; overflow: auto; scrollbar-width: thin; padding-right: 4px; }
+.pool-letter { position: sticky; top: 0; z-index: 1; margin: 0; padding: 6px 2px; background: #101012; font-family: var(--display); font-weight: 900; font-size: 22px; color: var(--signal); border-bottom: 1px solid var(--rule); }
+.pool-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 2px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+.pool-name { display: flex; flex-direction: column; min-width: 0; }
+.pool-name b { font-size: 15px; }
+.pool-st { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+.pool-row.st-sold .pool-name b, .pool-row.st-retained .pool-name b { color: var(--bone-3, #bbb); }
+.pool-row.st-unsold .pool-st .tiny { color: var(--amber, #f59e0b); }
+.pool-row.st-available .pool-st .tiny { color: var(--go, #2bd576); }
+@media (max-width: 560px) { .pool-card { height: 92vh; padding: 14px; } .pool-filters { flex-direction: column; } }
+.pool-card { box-sizing: border-box; }
+.pool { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.pool-card { min-width: 0; max-width: 100%; }

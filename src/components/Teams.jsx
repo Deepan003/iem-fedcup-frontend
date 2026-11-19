@@ -40,7 +40,7 @@ export function SquadCard({ team, currency }) {
         <TeamLogo team={team} size={32} />
         <div className="grow">
           <b className="ellipsis" style={{ display: 'block', fontFamily: 'var(--display)', fontWeight: 900, fontSize: 22, textTransform: 'uppercase', lineHeight: 1 }}>{team.name}</b>
-          {team.captainName && <span className="tiny">C · {team.captainName}</span>}
+          {team.captainName && <span className="tiny row" style={{ gap: 6 }}><Avatar player={(team.squad || []).find((p) => p.isCaptain) || { name: team.captainName, photoUrl: team.captainPhotoUrl }} size={20} />C · {team.captainName}</span>}
         </div>
         {team.purse !== undefined && <span className="amt" style={{ fontSize: 26 }}>{fmtAmount(team.purse)}</span>}
       </div>

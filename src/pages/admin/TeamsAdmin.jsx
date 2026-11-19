@@ -41,7 +41,7 @@ function TeamEditor({
     await call(`/admin/teams/${team.id}`, {
       method: 'PUT',
       body: {
-        name: form.name, shortName: form.shortName, color: form.color, captainName: form.captainName, budget: form.budget === '' ? null : Number(form.budget), frozen: form.frozen,
+        name: form.name, shortName: form.shortName, color: form.color, captainName: form.captainName, captainPosition: form.captainPosition || '', budget: form.budget === '' ? null : Number(form.budget), frozen: form.frozen,
       },
     });
     onSaved();
@@ -75,6 +75,12 @@ function TeamEditor({
         <Field label="Short name"><input className="input" value={form.shortName} onChange={set('shortName')} maxLength={5} /></Field>
         <Field label="Colour"><input className="input" type="color" value={form.color} onChange={set('color')} style={{ padding: 4 }} /></Field>
         <Field label="Captain"><input className="input" value={form.captainName} onChange={set('captainName')} /></Field>
+        <Field label="Captain's position">
+          <select className="input" value={form.captainPosition || ''} onChange={set('captainPosition')} title="Counts for the goalkeeper rule and position counts when the captain isn't added as a player">
+            <option value="">Not set</option>
+            {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </Field>
         <Field label="Captain photo">
           <label className="cap-photo" title="Upload the captain's photo (shown in the squad builder and team sheets)">
             {team.captainPhotoUrl ? <img src={assetUrl(team.captainPhotoUrl)} alt="" /> : <span>+ Photo</span>}
