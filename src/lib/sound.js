@@ -395,12 +395,11 @@ class SoundEngine {
     if (this.clip('bid', 0.9)) { this.swell(heat); return; }
     const t = this.t;
     const step = clamp(Math.log2(Math.max(1, multiple)), 0, 3);
-    const f = 440 * 2 ** (step * 0.42);
+    const f = 300 * 2 ** (step * 0.36); // 300–630 Hz: warm, never piercing
     this.noise(t, 0.07, 0.55, { type: 'lowpass', freq: 520, dest: this.sfxBus }); // paddle thump (dry)
-    this.noise(t, 0.025, 0.3, { type: 'highpass', freq: 4200 }); // slap
-    this.osc('triangle', f, t, 0.16, 0.3);
-    this.osc('sine', f * 1.5, t + 0.035, 0.16, 0.14); // a fifth above: "ding-ding"
-    this.osc('sine', f * 2, t + 0.035, 0.1, 0.06);
+    this.noise(t, 0.02, 0.18, { type: 'highpass', freq: 3000 }); // slap
+    this.osc('triangle', f, t, 0.18, 0.3);
+    this.osc('triangle', f * 1.5, t + 0.035, 0.14, 0.08); // a soft fifth: "ding-ding"
     if (multiple >= 3) this.osc('sine', 82, t, 0.3, 0.45, { to: 50 }); // weight for big money
     this.swell(heat);
   }
@@ -427,7 +426,9 @@ class SoundEngine {
   beep(final = false) {
     if (!this.can()) return;
     const t = this.t;
-    this.osc('sine', final ? 1320 : 880, t, final ? 0.16 : 0.11, final ? 0.3 : 0.2);
+    // a clock "tick… tock": short, woody and soft — no piercing tone
+    this.noise(t, 0.035, final ? 0.42 : 0.3, { freq: final ? 1100 : 1700, q: 5, attack: 0.001 });
+    this.osc('triangle', final ? 420 : 620, t, 0.07, final ? 0.2 : 0.12, { attack: 0.001, to: final ? 380 : 580 });
     this.heartbeat(final ? 1 : 0.7);
   }
 
@@ -547,9 +548,9 @@ class SoundEngine {
   /** Bright sparkle (records, reveals). */
   shimmer() {
     if (!this.can()) return;
-    [1568, 2093, 2637, 3136, 2349, 2794].forEach((f, i) => {
+    [784, 1047, 1319, 1568, 1175, 1397].forEach((f, i) => {
       const t = this.t + i * 0.06;
-      this.osc('sine', f, t, 0.5, 0.06, { dest: this.panned((i % 3) - 1) });
+      this.osc('triangle', f, t, 0.45, 0.04, { dest: this.panned((i % 3) - 1) });
     });
   }
 
@@ -661,8 +662,8 @@ class SoundEngine {
   /** Captain: you have been outbid. */
   outbid() {
     if (!this.can()) return;
-    this.osc('square', 988, this.t, 0.12, 0.12);
-    this.osc('square', 740, this.t + 0.14, 0.18, 0.12);
+    this.osc('triangle', 660, this.t, 0.12, 0.22);
+    this.osc('triangle', 495, this.t + 0.14, 0.18, 0.22);
     try { navigator.vibrate?.([120, 60, 120]); } catch { /* not supported */ }
   }
 
