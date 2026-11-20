@@ -191,7 +191,7 @@ export default function Control() {
       <ShortcutHelp
         open={keys.help}
         onClose={() => keys.setHelp(false)}
-        all={[['N', 'Next player'], ['O', 'Open bidding'], ['C', 'Close bidding'], ['T', '+10 seconds'], ['R', 'Reopen bidding'], ['P', 'Pause / resume'], ['⇧S', 'Confirm SOLD'], ['⇧U', 'Mark unsold'], ['⇧Z', 'Undo last bid']]}
+        all={[['N', 'Next player'], ['O', 'Open bidding'], ['C', 'Close bidding'], ['T', '+10 seconds'], ['R', 'Reopen bidding'], ['P', 'Pause / resume'], ['⇧S', 'Confirm SOLD'], ['⇧U', 'Mark unsold'], ['⇧Z', 'Undo last bid'], ['⇧X', 'Reset all bids']]}
       />
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
         <h1 className="ctl-h1">Control room</h1>
@@ -257,6 +257,7 @@ export default function Control() {
                 <button type="button" data-kbd="c" data-kbd-label="C" data-kbd-name="Close bidding" className="btn gold big-confirm" disabled={busy} onClick={() => act('closeBidding')}>🔨 Close bidding</button>
                 <button type="button" data-kbd="t" data-kbd-label="T" data-kbd-name="+10 seconds" className="btn" disabled={busy} onClick={() => act('extend', { seconds: 10 })}>+10 seconds</button>
                 <button type="button" data-kbd="shift+z" data-kbd-label="⇧Z" data-kbd-name="Undo last bid" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: { title: 'Undo the last bid?', message: 'The latest bid is removed and the previous bidder leads again.', tone: 'warning', confirmLabel: 'Undo bid' } })}>↶ Undo last bid</button>
+                <button type="button" data-kbd="shift+x" data-kbd-label="⇧X" data-kbd-name="Reset all bids" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('resetBids', {}, { confirm: { title: 'Reset ALL bids on this player?', message: 'Every bid is wiped: the player goes back to his base price with no leader and bidding restarts with a fresh timer.', tone: 'danger', confirmLabel: 'Reset all bids' } })}>⟲ Reset all bids</button>
                 <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot', {}, { confirm: { title: 'Withdraw this player?', message: 'All bids on this lot are discarded and the player returns to the queue.', tone: 'warning', confirmLabel: 'Withdraw' } })}>Withdraw lot</button>
               </div>
             )}
@@ -269,6 +270,7 @@ export default function Control() {
                   </button>
                   <button type="button" data-kbd="r" data-kbd-label="R" data-kbd-name="Reopen bidding" className="btn" disabled={busy} onClick={() => act('reopenBidding')}>Reopen bidding</button>
                   <button type="button" data-kbd="shift+z" data-kbd-label="⇧Z" data-kbd-name="Undo last bid" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: { title: 'Undo the last bid?', message: 'The latest bid is removed and the previous bidder leads again.', tone: 'warning', confirmLabel: 'Undo bid' } })}>↶ Undo last bid</button>
+                <button type="button" data-kbd="shift+x" data-kbd-label="⇧X" data-kbd-name="Reset all bids" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('resetBids', {}, { confirm: { title: 'Reset ALL bids on this player?', message: 'Every bid is wiped: the player goes back to his base price with no leader and bidding restarts with a fresh timer.', tone: 'danger', confirmLabel: 'Reset all bids' } })}>⟲ Reset all bids</button>
                   <button type="button" data-kbd="shift+u" data-kbd-label="⇧U" data-kbd-name="Mark unsold" className="btn danger" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: { title: 'Mark unsold?', message: 'Bidding is over and this player is marked unsold.', tone: 'warning', confirmLabel: 'Mark unsold' } })}>✕ Mark unsold</button>
                 </div>
                 {!leader && <p className="muted small" style={{ margin: 0 }}>No bids were placed. Mark the player unsold or reopen bidding.</p>}

@@ -15,6 +15,8 @@ export function useAuction({ token = null, onSessionEnded, onEvent } = {}) {
   const [state, setState] = useState(null);
   const [connected, setConnected] = useState(false);
   const [viewers, setViewers] = useState(null);
+  const [presence, setPresence] = useState({ online: [], joined: [] }); // captains in the room
+  const [joinEvent, setJoinEvent] = useState(null);                     // latest 'team joined' moment
   const offsetRef = useRef(0);
   const socketRef = useRef(null);
   const stateRef = useRef(null);
@@ -75,6 +77,8 @@ export function useAuction({ token = null, onSessionEnded, onEvent } = {}) {
       cbRef.current.onEvent?.('bid', d);
     });
     s.on('viewers', setViewers);
+    s.on('presence', (p) => setPresence({ online: p?.online || [], joined: p?.joined || [] }));
+    s.on('captain:joined', (e) => setJoinEvent({ ...e, key: `${e.teamId}-${e.at}` }));
     s.on('job', (j) => cbRef.current.onEvent?.('job', j));
 
     const clockTimer = setInterval(syncClock, 60_000);
@@ -105,7 +109,7 @@ export function useAuction({ token = null, onSessionEnded, onEvent } = {}) {
   }, []);
 
   return {
-    state, connected, viewers, now, emit, mergeLot,
+    state, connected, viewers, now, emit, mergeLot, presence, joinEvent,
   };
 }
 

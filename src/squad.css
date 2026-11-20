@@ -85,3 +85,19 @@
   .sb3-tools .sb3-select { flex: 1 1 100%; }
   .sb3-tools .sb3-select select { width: 100%; }
 }
+
+/* "every formation" sheet: hidden on screen, the only thing printed while it is open */
+.sb-allf { position: fixed; left: -99999px; top: 0; width: 1000px; }
+@media print {
+  body.print-allf * { visibility: hidden !important; }
+  body.print-allf .sb-allf, body.print-allf .sb-allf * { visibility: visible !important; }
+  body.print-allf .sb-allf { position: absolute; left: 0; top: 0; width: 100%; color: #000; }
+  .sb-allf h1 { margin: 0 0 10px; font: 900 22px/1 sans-serif; text-transform: uppercase; }
+  .sb-allf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sb-allf-item { break-inside: avoid; }
+  .sb-allf-item b { display: block; margin-bottom: 3px; font: 800 13px sans-serif; }
+  .sb-allf-pitch { position: relative; aspect-ratio: 68 / 100; border: 1.5px solid #1a5228; background: #e9f4ec; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sb-allf-pitch::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid #1a5228; }
+  .sb-allf-pitch span { position: absolute; transform: translate(-50%, -50%); padding: 1px 4px; border-radius: 2px; background: #111; color: #fff; font: 700 8.5px sans-serif; white-space: nowrap; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sb-allf-pitch span.empty { background: transparent; color: #1a5228; border: 1px dashed #1a5228; }
+}

@@ -947,3 +947,27 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
   .cs-list .cs-pos b { font-size: 16px; }
 }
 @media (min-width: 1240px) { .cap-left .cs-list { gap: 0; } .cap-left .cs-list .cs-list-head, .cap-left .cs-list .cs-pos { margin-bottom: 6px; } }
+
+/* captain room on wide AND tall screens (e.g. 1920×1080 at 100%): stack purse over the full squad in one
+   slim column instead of two side-by-side boxes, and give the freed width to the player in the centre.
+   Short laptop screens keep the two-column version so a full squad still fits without scrolling. */
+@media (min-width: 1440px) and (min-height: 820px) {
+  .container.cap-wide .cap-grid { grid-template-columns: 330px minmax(0, 1fr) 320px; gap: 26px; }
+  .container.cap-wide .cap-left { display: flex; flex-direction: column; gap: 12px; }
+  .container.cap-wide .cap-left .cs-list, .container.cap-wide .cap-left .cs-block:not(.cs-list) { grid-column: auto; grid-row: auto; }
+  .container.cap-wide .cap-left .cs-list { order: 2; }
+}
+@media (min-width: 1680px) and (min-height: 820px) {
+  .container.cap-wide .cap-grid { grid-template-columns: 350px minmax(0, 1fr) 340px; }
+}
+.cs-presence .joined-strip { gap: 8px; }
+.cs-presence .js-row { gap: 4px; }
+.cs-presence .js-team .team-logo { width: 24px !important; height: 24px !important; }
+@media (min-width: 1440px) and (min-height: 820px) {
+  .container.cap-wide .cap-left { align-items: stretch; }
+  .container.cap-wide .cap-left > * { width: 100%; max-width: none; box-sizing: border-box; }
+}
+
+/* purse standings: team names wrap instead of being cut with "…" */
+.purse .ellipsis { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.purse b { min-width: 0; }

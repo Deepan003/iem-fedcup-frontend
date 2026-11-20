@@ -1,3 +1,4 @@
+import { JoinedStrip } from './Presence.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { assetUrl } from '../lib/api.js';
 import {
@@ -341,7 +342,7 @@ function BrandSlide({ state }) {
 /* ------------------------------ root ------------------------------ */
 
 /** Full-screen studio screensaver: cycles the chosen screens while paused / between players / on demand. */
-export default function Screensaver({ state }) {
+export default function Screensaver({ state, presence }) {
   const active = screensaverActive(state);
   const [mounted, setMounted] = useState(active);
   const [leaving, setLeaving] = useState(false);
@@ -418,6 +419,7 @@ export default function Screensaver({ state }) {
       </div>
       <div className="ss-ghost" key={`g-${slide.key}`} aria-hidden="true"><span>{ghost} · {ghost} · {ghost} · {ghost} · </span></div>
       <div className="ss-wipe" key={`w-${slide.key}-${idx}`} aria-hidden="true" />
+      {presence?.online?.length > 0 && state?.status !== 'ended' && <div className="ss-presence"><JoinedStrip state={state} presence={presence} /></div>}
       <header className="ss-bar-top">
         <BrandMark />
         <span className="ss-title">{state.studio?.title || 'IEM FED Cup Auction'}</span>

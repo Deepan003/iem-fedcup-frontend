@@ -13,6 +13,7 @@ import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 import Screensaver from '../components/Screensaver.jsx';
 import { AuctionProgress, PositionAnnounce, RankList } from '../components/Live.jsx';
 import PlayerPool from '../components/PlayerPool.jsx';
+import { JoinMoment } from '../components/Presence.jsx';
 import { api } from '../lib/api.js';
 
 function Clock() {
@@ -29,7 +30,7 @@ export default function Studio() {
   const [params] = useSearchParams();
   const screen = params.get('screen') === '1';
   const {
-    state, connected, viewers, now,
+    state, connected, viewers, now, presence, joinEvent,
   } = useAuction();
   const snd = useAuctionSound(state, now, { surface: 'studio' });
   const live = state?.status === 'live';
@@ -127,7 +128,8 @@ export default function Studio() {
         </main>
       )}
       {state?.status === 'ended' && showReveal && <TeamReveal state={state} onClose={() => setShowReveal(false)} />}
-      <Screensaver state={state} />
+      <Screensaver state={state} presence={presence} />
+      <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact={state?.status === 'live' && !state?.paused && ['bidding', 'awaiting'].includes(state?.lot?.phase)} />
       {poolOpen && state && <PlayerPool load={() => api('/pool')} teams={state.teams} currency={state.currency} version={`${state.dataV}-${state.stats?.sold}-${state.stats?.unsold}-${state.stats?.retained}`} onClose={() => setPoolOpen(false)} />}
       {state && <PositionAnnounce state={state} />}
       <SoldOverlay state={state} />

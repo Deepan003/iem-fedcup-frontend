@@ -9,9 +9,9 @@ import '../squad.css';
 /* --------------------------------- formations --------------------------------- */
 
 export const FORMATION_GROUPS = [
-  ['11-a-side', ['4-4-2', '4-3-3', '4-2-3-1', '4-5-1', '4-4-1-1', '4-1-4-1', '4-1-2-1-2', '4-2-2-2', '4-3-2-1', '3-5-2', '3-4-3', '3-4-1-2', '3-4-2-1', '5-3-2', '5-4-1', '5-2-3']],
-  ['9-a-side', ['3-3-2', '3-4-1', '4-3-1', '3-2-3']],
-  ['7-a-side', ['2-3-1', '3-2-1', '3-1-2', '2-2-2']],
+  ['11-a-side', ['4-4-2', '4-3-3', '4-2-3-1', '4-5-1', '4-4-1-1', '4-1-4-1', '4-1-2-1-2', '4-2-2-2', '4-3-2-1', '3-5-2', '3-4-3', '3-4-1-2', '3-4-2-1', '5-3-2', '5-4-1', '5-2-3', '4-3-1-2', '4-1-3-2', '4-2-1-3', '4-1-2-3', '4-2-4', '3-1-4-2', '3-5-1-1', '3-2-4-1', '3-3-3-1', '5-2-1-2', '5-2-2-1']],
+  ['9-a-side', ['3-3-2', '3-4-1', '4-3-1', '3-2-3', '2-4-2', '3-1-3-1', '3-2-2-1']],
+  ['7-a-side', ['2-3-1', '3-2-1', '3-1-2', '2-2-2', '2-1-2-1', '1-3-2']],
 ];
 const POS_ORDER = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
 const linePos = (i, n) => (i === 0 ? 'Defender' : i === n - 1 ? 'Forward' : 'Midfielder');
@@ -25,7 +25,9 @@ export function formationSlots(formation) {
   lines.forEach((count, li) => {
     const y = bottom - (li * ((bottom - top) / Math.max(1, lines.length - 1)));
     for (let k = 0; k < count; k += 1) {
-      const spread = count === 1 ? 50 : 12 + (k * 76) / (count - 1);
+      // narrow lines stay central (a front two, a lone No.10), wide lines reach the flanks
+      const half = count === 1 ? 0 : Math.min(38, 10 + count * 7);
+      const spread = count === 1 ? 50 : 50 - half + (k * 2 * half) / (count - 1);
       slots.push({ id: `l${li}s${k}`, position: linePos(li, lines.length), x: spread, y });
     }
   });
@@ -237,6 +239,23 @@ export default function SquadBuilder({
     window.addEventListener('afterprint', done);
     setTimeout(() => window.print(), 50);
   };
+  // team list as a spreadsheet (opens in Excel / Google Sheets)
+  const downloadList = () => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['#', 'Name', 'Position', 'Role', 'Price'], ...squad.map((p, i) => [i + 1, p.name, p.position || '', p.isCaptain ? 'Captain' : p.retained ? 'Retained' : 'Bought', p.isCaptain ? '' : money(p.price, currency)])];
+    const blob = new Blob(['\ufeff' + rows.map((r) => r.map(esc).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${team?.name || 'team'} - squad list.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  // every formation on one printable sheet (best XI for each), saved as PDF from the print dialog
+  const [allF, setAllF] = useState(false);
+  const printAll = () => {
+    setAllF(true);
+    document.body.classList.add('print-allf');
+    const done = () => { document.body.classList.remove('print-allf'); setAllF(false); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => window.print(), 300);
+  };
   const groups = FORMATION_GROUPS.map(([g, list]) => [g, list.filter((f) => !formations?.length || formations.includes(f))]).filter(([, l]) => l.length);
   const benchBy = [['Captain', bench.filter((p) => p.isCaptain && !p.position)], ...POS_ORDER.map((pos) => [pos, bench.filter((p) => p.position === pos)])].filter(([, l]) => l.length);
   const dragP = drag ? byId[drag.id] : null;
@@ -261,7 +280,9 @@ export default function SquadBuilder({
           </label>
           <button type="button" className="btn sm" onClick={() => { commit(autoPick(slots, squad)); setSel(null); }} title="Best XI by position (fills gaps with anyone left)">✨ Auto pick</button>
           <button type="button" className="btn sm ghost" onClick={() => { commit({}); setSel(null); }}>Clear</button>
-          <button type="button" className="btn sm ghost" onClick={printPdf}>⬇ PDF</button>
+          <button type="button" className="btn sm ghost" onClick={printPdf} title="This lineup as a PDF">⬇ Lineup PDF</button>
+          <button type="button" className="btn sm ghost" onClick={downloadList} title="Your squad as a spreadsheet">⬇ Team list</button>
+          <button type="button" className="btn sm ghost" onClick={printAll} title="Every formation with your best XI, as a PDF">⬇ All formations</button>
         </div>
       </div>
 
@@ -321,6 +342,25 @@ export default function SquadBuilder({
           {sel?.id && sel.from !== 'bench' && <button type="button" className="btn sm ghost no-print-sb" onClick={() => { toBench(sel.id); setSel(null); }}>Take off (to bench)</button>}
         </aside>
       </div>
+
+      {allF && (
+        <div className="sb-allf">
+          <h1>{team?.name} · every formation</h1>
+          <div className="sb-allf-grid">
+            {groups.flatMap(([, list]) => list).map((fm) => {
+              const sl = formationSlots(fm); const pick = autoPick(sl, squad);
+              return (
+                <section key={fm} className="sb-allf-item">
+                  <b>{fm}</b>
+                  <div className="sb-allf-pitch">
+                    {sl.map((x) => { const p = byId[pick[x.id]]; return <span key={x.id} className={p ? '' : 'empty'} style={{ left: `${x.x}%`, top: `${x.y}%` }}>{p ? shortName(p.name) : POS_SHORT[x.position]}</span>; })}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {dragP && (
         <div className="sb3-ghost" style={{ left: drag.x, top: drag.y }}>

@@ -16,6 +16,7 @@ import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 import { ShortcutHelp, useShortcuts } from '../lib/shortcuts.jsx';
 import SquadBuilder from '../components/SquadBuilder.jsx';
 import PlayerPool from '../components/PlayerPool.jsx';
+import { JoinMoment, JoinedStrip } from '../components/Presence.jsx';
 import { AuctionProgress } from '../components/Live.jsx';
 
 /* --------------------------------- login --------------------------------- */
@@ -70,7 +71,7 @@ function CaptainLogin({ onLogin }) {
 function CaptainRoom({ auth, onLogout }) {
   const toast = useToast();
   const {
-    state, connected, now, emit, mergeLot,
+    state, connected, now, emit, mergeLot, presence, joinEvent,
   } = useAuction({
     token: auth.token,
     onSessionEnded: () => {
@@ -136,7 +137,9 @@ function CaptainRoom({ auth, onLogout }) {
   else if (state.status !== 'live') reason = state.status === 'ended' ? 'Auction finished' : 'Auction not started';
   else if (state.paused) reason = 'Paused by auctioneer';
   else if (state.mode !== 'online' || !cv.biddingEnabled) reason = 'Bidding happens in the room';
-  else if (!lot || lot.phase === 'reveal') reason = lot ? 'Bidding opens soon' : 'Waiting for next player';
+  else if (!lot || lot.phase === 'reveal') { // the player card already says 'opens shortly': say something useful instead
+    reason = !lot ? 'Waiting for next player' : state.me?.blockReason ? explain(state.me.blockReason) : `Get ready · your max for this player ${money(state.me?.maxBidForLot, state.currency)}`;
+  }
   else if (lot.phase === 'awaiting') reason = 'Bidding closed';
   else if (lot.phase !== 'bidding') reason = lot.phase === 'sold' ? 'Sold' : 'Unsold';
   else if (state.me?.blockReason) reason = explain(state.me.blockReason);
@@ -256,6 +259,7 @@ function CaptainRoom({ auth, onLogout }) {
   );
   const rightRail = (
     <aside className="cap-side cap-right" aria-label="Other teams">
+      <div className="cs-block cs-presence"><JoinedStrip state={state} presence={presence} label="In the room" /></div>
       {rivals.length > 0 && (
         <div className="cs-block">
           <span className="label">Can outbid you</span>
@@ -301,6 +305,7 @@ function CaptainRoom({ auth, onLogout }) {
   return (
     <main className="container studio cap-wide" style={{ paddingBottom: 0, paddingTop: 80 }}>
       <ShortcutHelp open={keys.help} onClose={() => keys.setHelp(false)} />
+      <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact />
       {poolOpen && <PlayerPool load={() => api('/captain/pool', { token: auth.token })} teams={state.teams} currency={state.currency} version={`${state.dataV}-${state.stats?.sold}-${state.stats?.unsold}-${state.stats?.retained}`} onClose={() => setPoolOpen(false)} />}
       <div className="studio-bg" />
       <div className="cap-head" style={{ borderBottom: `2px solid ${me?.color || 'var(--rule)'}` }}>
