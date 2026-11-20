@@ -58,6 +58,34 @@ export default function PlayerStory({
   const allBids = lots.flatMap((l) => l.bids);
   const bidders = new Set(allBids.map((b) => b.teamId)).size;
 
+  // the bidding-war film: the winning lot, or the latest finished lot when the player went unsold
+  const [filmBusy, setFilmBusy] = useState('');
+  const [filmProg, setFilmProg] = useState(0);
+  const [filmErr, setFilmErr] = useState('');
+  const filmLot = useMemo(() => {
+    const done = (data?.lots || []).filter((l) => l.bids?.length && !(liveLot && l.seq === liveLot.seq));
+    return done.find((l) => l.final) || (p?.status === 'unsold' ? done[done.length - 1] : null) || null;
+  }, [data, liveLot, p?.status]);
+  const makeFilm = async (ratio) => {
+    setFilmBusy(ratio); setFilmErr(''); setFilmProg(0);
+    try {
+      const { bidFilm } = await import('../lib/bidFilm.js');
+      const r = await bidFilm({
+        player: p, lot: filmLot, teamMap, fmt: (n) => money(n, currency), sold: !!filmLot.final, ratio, onProgress: setFilmProg,
+      });
+      if (!r) throw new Error('Videos need Chrome, Edge or Safari 14.1+.');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(r.blob);
+      a.download = `${(p.name || 'player').replace(/[^\w]+/g, '-').toLowerCase()}-bidding-war-${ratio === '1x1' ? 'square' : 'story'}.${r.ext}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    } catch (e) {
+      setFilmErr(e.message || 'Could not make the video.');
+    } finally {
+      setFilmBusy('');
+    }
+  };
+
   const share = async () => {
     const link = `${window.location.origin}/players?p=${id}`;
     try {
@@ -105,6 +133,26 @@ export default function PlayerStory({
                 </div>
               )}
             </div>
+
+            {filmLot && (
+              <div className="story-film">
+                <div className="sf-head">
+                  <b>Bidding war video</b>
+                  <span className="tiny">{filmLot.bids.length} bid{filmLot.bids.length === 1 ? '' : 's'} · with music</span>
+                </div>
+                <div className="sf-btns">
+                  <button type="button" className="btn sm primary" disabled={!!filmBusy} onClick={() => makeFilm('9x16')}>▶ MP4 · Story 9:16</button>
+                  <button type="button" className="btn sm" disabled={!!filmBusy} onClick={() => makeFilm('1x1')}>▶ MP4 · Post 1:1</button>
+                </div>
+                {filmBusy && (
+                  <div className="cs-prog" role="progressbar" aria-valuenow={Math.round(filmProg * 100)} aria-valuemin={0} aria-valuemax={100}>
+                    <i style={{ width: `${Math.round(filmProg * 100)}%` }} />
+                    <span>Recording the bidding war… {Math.round(filmProg * 100)}% · keep this open</span>
+                  </div>
+                )}
+                {filmErr && <span className="tiny" style={{ color: 'var(--signal)' }}>{filmErr}</span>}
+              </div>
+            )}
 
             <div className="story-stats">
               <div><b>{allBids.length}</b><span className="tiny">bids</span></div>
