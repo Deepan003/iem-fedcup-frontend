@@ -231,19 +231,17 @@ function CaptainRoom({ auth, onLogout }) {
         <div className="cs-kv"><span>Max bid now</span><b>{money(state.me?.maxBidForLot ?? me?.maxBid, state.currency)}</b></div>
         {me?.penalty > 0 && <div className="cs-kv"><span>Penalties</span><b className="pen-tag">−{money(me.penalty, state.currency)}</b></div>}
       </div>
-      <div className="cs-block">
-        <span className="label">Squad</span>
-        <div className="cs-big">{me?.count ?? mySquad.length}{slotsTotal != null && <small>/{slotsTotal}</small>}</div>
-        {me?.slotsLeft != null && <span className="tiny">{me.slotsLeft} slot{me.slotsLeft === 1 ? '' : 's'} left</span>}
-        <div className="cs-pos">
-          {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((p) => (
-            <span key={p} className={posCount(p) ? '' : 'zero'}><b>{posCount(p)}</b>{POS_SHORT[p]}</span>
-          ))}
-        </div>
-      </div>
-      {squadList.length > 0 && (
-        <div className="cs-block cs-list">
-          <span className="label">Your players · {squadList.length}</span>
+      <div className="cs-block cs-list">
+          <div className="cs-list-head">
+            <span className="label">Your squad</span>
+            <b className="cs-count">{me?.count ?? mySquad.length}{slotsTotal != null && <small>/{slotsTotal}</small>}</b>
+            {me?.slotsLeft != null && <span className="tiny">{me.slotsLeft} slot{me.slotsLeft === 1 ? '' : 's'} left</span>}
+          </div>
+          <div className="cs-pos">
+            {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((p) => (
+              <span key={p} className={posCount(p) ? '' : 'zero'}><b>{posCount(p)}</b>{POS_SHORT[p]}</span>
+            ))}
+          </div>
           {squadList.map((p) => (
             <div key={p.id} className="cs-row">
               <Avatar player={p} size={26} />
@@ -252,8 +250,8 @@ function CaptainRoom({ auth, onLogout }) {
               <b className="mono small">{p.isCaptain && !p.price ? 'C' : money(p.price, state.currency)}</b>
             </div>
           ))}
-        </div>
-      )}
+          {squadList.length === 0 && <span className="tiny">No players yet</span>}
+      </div>
     </aside>
   );
   const rightRail = (
@@ -311,7 +309,7 @@ function CaptainRoom({ auth, onLogout }) {
           <div className="display ellipsis" style={{ fontSize: 30 }}>{me?.name}</div>
           <span className="tiny">{me?.count} player{me?.count === 1 ? '' : 's'} · max bid {money(state.me?.maxBidForLot ?? me?.maxBid, state.currency)}</span>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div className="cap-head-purse" style={{ textAlign: 'right' }}>
           <div className="money"><RollingNumber value={me?.purse ?? 0} money /></div>
           <span className="tiny">{state.currency} left</span>
           {after != null && (
@@ -322,8 +320,8 @@ function CaptainRoom({ auth, onLogout }) {
           )}
           {me?.penalty > 0 && <span className="pen-tag" style={{ display: 'block' }} title={(me.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>incl. −{money(me.penalty, state.currency)} penalty</span>}
         </div>
-      </div>
-      <div className="row" style={{ justifyContent: 'space-between', marginTop: -14 }}>
+      <div className="cap-progress"><span className="label">Still to come</span><AuctionProgress state={state} compact /></div>
+      <div className="row cap-tools" style={{ justifyContent: 'space-between' }}>
         {connected ? <span className="tiny" style={{ color: 'var(--go)' }}>● Connected</span> : <span className="tiny" style={{ color: 'var(--amber)' }}>● Reconnecting</span>}
         <span className="row" style={{ gap: 8 }}>
           <SoundDock state={state} sound={snd} surface="captain" inline />
@@ -331,8 +329,8 @@ function CaptainRoom({ auth, onLogout }) {
           <button type="button" className="btn sm ghost" onClick={onLogout}>Sign out</button>
         </span>
       </div>
+      </div>
 
-      <div className="cap-progress"><span className="label">Auction progress · still to come</span><AuctionProgress state={state} compact /></div>
       <div className="cap-grid">
       {leftRail}
       <div className="cap-center">

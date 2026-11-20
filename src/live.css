@@ -41,3 +41,16 @@
 @media (max-width: 600px) {
   .ap.compact .ap-cell { grid-template-columns: 1fr; text-align: center; }
 }
+
+/* progress: one clear colour per position, no gradients mixing */
+.ap-cell { --pc: var(--bone, #efebe3); border-top-color: var(--pc) !important; }
+.ap-all { --pc: #efebe3; }
+.ap-Goalkeeper { --pc: #f5c542; }
+.ap-Defender { --pc: #3b82f6; }
+.ap-Midfielder { --pc: #22c55e; }
+.ap-Forward { --pc: #ef4444; }
+.ap-k { color: var(--pc); }
+.ap-bar { background: rgba(255, 255, 255, 0.1); }
+.ap-bar i { background: var(--pc) !important; }
+.ap-pct { grid-column: 1 / -1; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; color: var(--dim); }
+.ap.compact .ap-pct { display: none; }

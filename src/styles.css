@@ -910,3 +910,40 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
 .cap-side .rival b { grid-column: 2; }
 .cap-side .rival .rival-tag { grid-column: 3; grid-row: 1; align-self: center; }
 .cap-side .rival .mono { grid-column: 2 / 4; }
+
+/* captain header: tools on the header line; on narrow screens they wrap under it */
+.cap-head .cap-tools { grid-column: 1 / -1; margin-top: 2px; }
+@media (min-width: 1240px) {
+  .cap-wide .cap-head { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+  .cap-wide .cap-head .cap-tools { grid-column: auto; margin: 0; gap: 18px; }
+  .cap-wide .cap-head-purse { display: none; } /* shown big in the left panel */
+}
+.cs-list-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cs-count { font-family: var(--display); font-weight: 900; font-size: 28px; line-height: 1; }
+.cs-count small { font-family: var(--mono); font-size: 12px; opacity: 0.6; }
+.cs-list .cs-pos { margin: 2px 0 6px; }
+.cs-list .cs-pos b { font-size: 18px; }
+/* 1440+: purse beside the full squad list */
+@media (min-width: 1440px) {
+  .cap-grid { grid-template-columns: 540px minmax(0, 1fr) 300px; }
+  .cap-left { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .cap-left .cs-list { grid-column: 2; grid-row: 1 / span 3; }
+  .cap-left .cs-block:not(.cs-list) { grid-column: 1; }
+}
+@media (min-width: 1680px) {
+  .cap-grid { grid-template-columns: 580px minmax(0, 1fr) 340px; }
+  .cap-left { grid-template-columns: 260px minmax(0, 1fr); }
+}
+.cap-head .cap-progress { grid-column: 1 / -1; margin: 4px 0 0; }
+@media (min-width: 1240px) {
+  .cap-wide .cap-head { grid-template-columns: auto auto minmax(0, 1fr) auto auto; column-gap: 18px; }
+  .cap-wide .cap-head .cap-progress { grid-column: auto; margin: 0; }
+  .cap-wide .cap-head .cap-progress .label { display: none; }
+  .cap-wide .cap-head .cap-progress .ap.compact { min-width: 0; }
+  .cs-list .cs-row { padding: 1px 0; min-height: 26px; grid-template-columns: 22px minmax(0, 1fr) auto auto; }
+  .cs-list .avatar { width: 22px !important; height: 22px !important; }
+  .cs-list .cs-row .ellipsis { font-size: 13px; line-height: 1.1; }
+  .cs-list .cs-pos span { padding: 3px 0; }
+  .cs-list .cs-pos b { font-size: 16px; }
+}
+@media (min-width: 1240px) { .cap-left .cs-list { gap: 0; } .cap-left .cs-list .cs-list-head, .cap-left .cs-list .cs-pos { margin-bottom: 6px; } }

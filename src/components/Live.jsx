@@ -12,13 +12,18 @@ export function AuctionProgress({ state, compact = false }) {
   const s = state?.stats;
   if (!s?.pool) return null;
   const byPos = s.byPosition || {};
-  const cell = (label, left, total, key) => (
-    <div key={key} className="ap-cell" title={`${left} of ${total} still to come`}>
-      <span className="ap-k">{label}</span>
-      <span className="ap-v"><b>{left}</b>/{total}</span>
-      <span className="ap-bar"><i style={{ transform: `scaleX(${total ? (total - left) / total : 0})` }} /></span>
-    </div>
-  );
+  // one solid colour per position (no blended gradients), bar = share already auctioned
+  const cell = (label, left, total, key) => {
+    const done = total ? (total - left) / total : 0;
+    return (
+      <div key={key} className={`ap-cell ap-${key}`} title={`${left} of ${total} still to come · ${Math.round(done * 100)}% done`}>
+        <span className="ap-k">{label}</span>
+        <span className="ap-v"><b>{left}</b>/{total}</span>
+        <span className="ap-bar"><i style={{ transform: `scaleX(${done})` }} /></span>
+        <span className="ap-pct">{Math.round(done * 100)}% done</span>
+      </div>
+    );
+  };
   return (
     <div className={`ap ${compact ? 'compact' : ''}`} aria-label="Players still to come">
       {cell('Left', s.pool.left, s.pool.total, 'all')}
