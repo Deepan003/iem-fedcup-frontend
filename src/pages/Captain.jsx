@@ -301,7 +301,7 @@ function CaptainRoom({ auth, onLogout }) {
   return (
     <main className="container studio cap-wide" style={{ paddingBottom: 0, paddingTop: 80 }}>
       <ShortcutHelp open={keys.help} onClose={() => keys.setHelp(false)} />
-      {poolOpen && <PlayerPool load={() => api('/captain/pool', { token: auth.token })} teams={state.teams} currency={state.currency} onClose={() => setPoolOpen(false)} />}
+      {poolOpen && <PlayerPool load={() => api('/captain/pool', { token: auth.token })} teams={state.teams} currency={state.currency} version={`${state.dataV}-${state.stats?.sold}-${state.stats?.unsold}-${state.stats?.retained}`} onClose={() => setPoolOpen(false)} />}
       <div className="studio-bg" />
       <div className="cap-head" style={{ borderBottom: `2px solid ${me?.color || 'var(--rule)'}` }}>
         <TeamLogo team={me} size={48} />
@@ -386,7 +386,7 @@ function CaptainRoom({ auth, onLogout }) {
       <div className="tabs">
         {cv.showSquadBuilder !== false && <button type="button" className={tab === 'squad' ? 'on' : ''} onClick={() => setTab('squad')}>My squad</button>}
         <button type="button" className={tab === 'teams' ? 'on' : ''} onClick={() => setTab('teams')}>Other teams</button>
-        <button type="button" data-kbd="p" data-kbd-label="P" data-kbd-name="Player pool A–Z" onClick={() => setPoolOpen(true)}>Player pool A–Z</button>
+        <button type="button" data-kbd="p" data-kbd-label="P" data-kbd-name="Player pool" onClick={() => setPoolOpen(true)}>Player pool</button>
         {cv.showUpcoming && <button type="button" className={tab === 'next' ? 'on' : ''} onClick={() => setTab('next')}>Up next</button>}
       </div>
 

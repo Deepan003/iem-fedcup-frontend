@@ -48,7 +48,7 @@ export default function Studio() {
           {state && <span className="hide-sm">Round {state.round}</span>}
           {state && <span className="hide-sm">{state.stats.sold} sold · {state.stats.pool ? `${state.stats.pool.left} of ${state.stats.pool.total}` : state.stats.available} left</span>}
           {viewers?.total != null && <span>{viewers.total} watching</span>}
-          {state && !screen && <span><button type="button" className="btn sm ghost" onClick={() => setPoolOpen(true)}>Players A–Z</button></span>}
+          {state && !screen && <span><button type="button" className="btn sm ghost" onClick={() => setPoolOpen(true)}>Player pool</button></span>}
           {state?.status === 'ended' && <span><button type="button" className="btn sm primary" onClick={() => setShowReveal(true)}>▶ Team reveal</button></span>}
           {!connected ? <span style={{ color: 'var(--amber)' }}>Reconnecting</span> : <span className="hide-sm"><Clock /></span>}
         </div>
@@ -128,7 +128,7 @@ export default function Studio() {
       )}
       {state?.status === 'ended' && showReveal && <TeamReveal state={state} onClose={() => setShowReveal(false)} />}
       <Screensaver state={state} />
-      {poolOpen && state && <PlayerPool load={() => api('/players')} teams={state.teams} currency={state.currency} onClose={() => setPoolOpen(false)} />}
+      {poolOpen && state && <PlayerPool load={() => api('/pool')} teams={state.teams} currency={state.currency} version={`${state.dataV}-${state.stats?.sold}-${state.stats?.unsold}-${state.stats?.retained}`} onClose={() => setPoolOpen(false)} />}
       {state && <PositionAnnounce state={state} />}
       <SoldOverlay state={state} />
       <SoundDock state={state} sound={snd} surface="studio" big={screen} gate />
