@@ -53,7 +53,7 @@ export default function PlayerStory({
   const url = assetUrl(p?.photoUrl || p?.thumbUrl);
   const lots = useMemo(() => {
     const saved = (data?.lots || []).filter((l) => !liveLot || l.seq !== liveLot.seq);
-    return liveLot ? [...saved, liveLot] : saved;
+    return (liveLot ? [...saved, liveLot] : saved).slice().reverse(); // latest lot first
   }, [data, liveLot]);
   const allBids = lots.flatMap((l) => l.bids);
   const bidders = new Set(allBids.map((b) => b.teamId)).size;
@@ -129,13 +129,12 @@ export default function PlayerStory({
                       <span className="tiny">{l.live ? '● Live' : l.final ? 'Sold here' : 'No sale'}</span>
                     </h3>
                     <ol className="story-bids">
-                      {l.bids.map((b, i) => {
+                      {l.bids.map((b, i) => ({ b, n: i + 1 })).reverse().map(({ b, n }) => { // final bid on top
                         const t = teamMap[b.teamId];
                         const win = (l.final || l.live) && b === top;
                         return (
-                          // eslint-disable-next-line react/no-array-index-key
-                          <li key={i} className={win ? 'win' : ''} style={{ '--c': t?.color || '#888' }}>
-                            <span className="story-n">{i + 1}</span>
+                          <li key={n} className={win ? 'win' : ''} style={{ '--c': t?.color || '#888' }}>
+                            <span className="story-n">{n}</span>
                             <TeamLogo team={t} size={22} />
                             <span className="story-team">{t?.name || 'Team'}</span>
                             <span className="story-amt">{money(b.amount, currency)}</span>
