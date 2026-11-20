@@ -6,7 +6,7 @@
 
 /* Moving light in the slide's team colour */
 .ss-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.ss-bg i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(60px); opacity: 0.38; background: radial-gradient(circle, var(--c), transparent 65%); transition: background 1.2s var(--ease); }
+.ss-bg i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; opacity: 0.38; background: radial-gradient(circle, var(--c), transparent 62%); will-change: transform; contain: strict; transition: background 1.2s var(--ease); }
 .ss-bg i:first-child { left: -20vmax; top: -25vmax; animation: ss-drift 18s ease-in-out infinite alternate; }
 .ss-bg i:last-child { right: -25vmax; bottom: -30vmax; opacity: 0.22; animation: ss-drift 22s ease-in-out infinite alternate-reverse; }
 @keyframes ss-drift { to { transform: translate(12vmax, 8vmax) scale(1.15); } }

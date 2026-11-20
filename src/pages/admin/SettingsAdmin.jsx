@@ -122,7 +122,8 @@ function AuctionRules({ value, onSave }) {
         <MoneyField label="Team budget" value={a.teamBudget} onChange={set('teamBudget')} />
         <MoneyField label="Default base price" value={a.defaultBasePrice} onChange={set('defaultBasePrice')} hint="For players without a tier" />
         <NumField label="Min squad size" value={a.minSquadSize} onChange={set('minSquadSize')} />
-        <NumField label="Max squad size" value={a.maxSquadSize} onChange={set('maxSquadSize')} />
+        <NumField label="Max squad size" value={a.maxSquadSize} onChange={set('maxSquadSize')} hint="Whole squad: captain + retained + bought" />
+        <NumField label="Max retained per team" value={a.maxRetained ?? 2} onChange={set('maxRetained')} hint="Captain not counted" />
         <MoneyField label="Reserve per open slot" value={a.reservePerSlot} onChange={set('reservePerSlot')} hint="Money a team must keep for each player still needed" />
       </div>
 
@@ -163,6 +164,7 @@ function AuctionRules({ value, onSave }) {
 
       <h2 style={{ marginTop: 10 }}>Timers</h2>
       <Toggle label="Use countdown timers" hint="Turn off for fully manual auctions." checked={a.timerEnabled} onChange={set('timerEnabled')} />
+      <Toggle label="Captain counts in the squad" hint="The captain takes one squad slot (and their position), so with a 17 squad, a captain and 2 retained, a team buys 14 more." checked={a.captainInSquad !== false} onChange={set('captainInSquad')} />
       <Toggle label="Goalkeeper rule" hint="A team that already has a goalkeeper (bought, retained, or a goalkeeper captain) can't bid for another until every team has one." checked={a.gkRule !== false} onChange={set('gkRule')} />
       <Toggle label="Auctioneer must confirm every sale" hint="When the timer ends, bidding closes and waits for you to click Confirm SOLD." checked={a.requireConfirm} onChange={set('requireConfirm')} />
       <Toggle label="Open bidding automatically after the reveal" checked={a.autoOpen} onChange={set('autoOpen')} />

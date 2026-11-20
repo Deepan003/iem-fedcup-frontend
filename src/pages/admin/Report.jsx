@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { API_URL } from '../../lib/api.js';
-import { money } from '../../lib/format.js';
+import { API_URL, assetUrl } from '../../lib/api.js';
+import { initials, money } from '../../lib/format.js';
 import { Spinner, TeamLogo, useToast } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
 
@@ -57,13 +57,31 @@ function ReportDownloads({ onPrint }) {
   );
 }
 
+/** Round profile picture for printed reports (initials when there is no photo). */
+function Face({ url, name, size = 34 }) {
+  const src = assetUrl(url);
+  return src
+    ? <img className="rp-face" src={src} alt="" width={size} height={size} style={{ width: size, height: size }} />
+    : <span className="rp-face rp-ini" style={{ width: size, height: size }}>{initials(name || '')}</span>;
+}
+
+/** Print once every photo on the page has loaded (or after a few seconds at most). */
+export async function printWhenImagesReady(root = document, maxMs = 6000) {
+  const imgs = [...root.querySelectorAll('img')].filter((i) => !i.complete);
+  await Promise.race([
+    Promise.all(imgs.map((i) => new Promise((r) => { i.addEventListener('load', r, { once: true }); i.addEventListener('error', r, { once: true }); }))),
+    new Promise((r) => { setTimeout(r, maxMs); }),
+  ]);
+  window.print();
+}
+
 /** A single list laid out for printing; only this prints while it is open. */
 function PrintList({ data, onDone }) {
   useEffect(() => {
     document.body.classList.add('print-list');
     const done = () => onDone();
     window.addEventListener('afterprint', done);
-    const t = setTimeout(() => window.print(), 250);
+    const t = setTimeout(() => printWhenImagesReady(document.querySelector('.rp-list') || document), 250);
     return () => {
       clearTimeout(t);
       window.removeEventListener('afterprint', done);
@@ -76,11 +94,11 @@ function PrintList({ data, onDone }) {
       <h1>{data.title}</h1>
       <p>IEM Federation Cup · Season 5 · {new Date().toLocaleString()} · {data.rows.length} rows</p>
       <table className="rp-table">
-        <thead><tr>{data.columns.map(([k, h]) => <th key={k}>{h}</th>)}</tr></thead>
+        <thead><tr><th aria-label="Photo" />{data.columns.map(([k, h]) => <th key={k}>{h}</th>)}</tr></thead>
         <tbody>
           {data.rows.map((r, i) => (
             // eslint-disable-next-line react/no-array-index-key
-            <tr key={i}>{data.columns.map(([k]) => <td key={k}>{r[k] ?? ''}</td>)}</tr>
+            <tr key={i}><td className="rp-ph"><Face url={r.photo} name={r.player || r.name} size={28} /></td>{data.columns.map(([k]) => <td key={k}>{r[k] ?? ''}</td>)}</tr>
           ))}
         </tbody>
       </table>
@@ -98,6 +116,12 @@ export default function Report() {
   const date = new Date().toLocaleString();
   const teams = s.teams.map((t) => {
     const squad = [...(t.squad || [])].sort((a, b) => (b.isCaptain - a.isCaptain) || ((b.price || 0) - (a.price || 0)));
+    const capName = (t.captainName || '').trim().toLowerCase();
+    if (capName && !squad.some((p) => p.isCaptain || p.name.trim().toLowerCase() === capName)) {
+      squad.unshift({
+        id: `cap-${t.id}`, name: t.captainName, position: t.captainPosition || '—', isCaptain: true, thumbUrl: t.captainPhotoUrl, price: 0,
+      });
+    }
     return { ...t, squad, spent: squad.reduce((x, p) => x + (p.price || 0), 0) };
   });
 
@@ -106,7 +130,7 @@ export default function Report() {
       <ReportDownloads onPrint={setPrinting} />
       {printing && <PrintList data={printing} onDone={() => setPrinting(null)} />}
       <div className="report-tools no-print">
-        <button type="button" className="btn primary lg" onClick={() => window.print()}>⬇ Save as PDF</button>
+        <button type="button" className="btn primary lg" onClick={() => printWhenImagesReady()}>⬇ Save as PDF</button>
         <span className="muted small">In the print dialog choose "Save as PDF". Each team starts on a new page.</span>
       </div>
 
@@ -142,11 +166,12 @@ export default function Report() {
             </div>
           </header>
           <table className="rp-table">
-            <thead><tr><th>#</th><th>Name</th><th>Position</th><th>Department</th><th>Year</th><th>Role</th><th>Price</th></tr></thead>
+            <thead><tr><th>#</th><th aria-label="Photo" /><th>Name</th><th>Position</th><th>Department</th><th>Year</th><th>Role</th><th>Price</th></tr></thead>
             <tbody>
               {t.squad.map((p, i) => (
                 <tr key={p.id}>
                   <td>{i + 1}</td>
+                  <td className="rp-ph"><Face url={p.thumbUrl || p.photoUrl} name={p.name} size={40} /></td>
                   <td><b>{p.name}</b></td>
                   <td>{p.position}</td>
                   <td>{p.department || '—'}</td>
@@ -155,7 +180,7 @@ export default function Report() {
                   <td>{p.isCaptain ? 'Free' : money(p.price, cur)}</td>
                 </tr>
               ))}
-              <tr className="rp-total"><td /><td>Total</td><td /><td /><td /><td /><td>{money(t.spent, cur)}</td></tr>
+              <tr className="rp-total"><td /><td /><td>Total</td><td /><td /><td /><td /><td>{money(t.spent, cur)}</td></tr>
             </tbody>
           </table>
         </section>

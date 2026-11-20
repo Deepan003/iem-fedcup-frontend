@@ -197,3 +197,8 @@ tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 }
 .cap-photo { width: 64px; height: 78px; display: grid; place-items: center; overflow: hidden; border: 1px dashed var(--rule-2); background: var(--ink-3); cursor: pointer; font-family: var(--mono); font-size: 11px; color: var(--dim); }
 .cap-photo img { width: 100%; height: 100%; object-fit: cover; }
+/* profile pictures in printed reports */
+.rp-ph { width: 48px; min-width: 48px; padding-right: 0 !important; }
+.rp-face { max-width: none; flex-shrink: 0; box-sizing: border-box; display: inline-grid; place-items: center; border-radius: 50%; object-fit: cover; object-position: 50% 20%; background: #eee; border: 1px solid #ddd; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.rp-ini { font-weight: 800; font-size: 11px; color: #555; }
+.rp-table tr { break-inside: avoid; }

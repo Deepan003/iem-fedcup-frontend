@@ -788,7 +788,7 @@ textarea.input { min-height: 120px; resize: vertical; font-family: var(--mono); 
 }
 
 /* ---------- player card studio ---------- */
-.card-studio { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 20px; background: rgba(4, 4, 5, 0.86); backdrop-filter: blur(8px); animation: fade-up 0.3s var(--ease) both; overflow: auto; }
+.card-studio { position: fixed; inset: 0; z-index: 150; display: grid; place-items: center; padding: 20px; background: rgba(4, 4, 5, 0.86); backdrop-filter: blur(8px); animation: fade-up 0.3s var(--ease) both; overflow: auto; }
 .cs-inner { display: grid; grid-template-columns: minmax(0, auto) minmax(220px, 300px); gap: 28px; align-items: center; max-width: 1000px; }
 .cs-canvas { width: min(56vh, 520px, 86vw); height: auto; aspect-ratio: 1080 / 1350; border-radius: 10px; box-shadow: 0 40px 120px -30px #000, 0 0 0 1px rgba(255, 255, 255, 0.08); }
 .cs-side { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }

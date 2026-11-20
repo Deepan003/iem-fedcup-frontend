@@ -68,3 +68,20 @@
   body.print-squad .sb3-pitch, body.print-squad .sb-face, body.print-squad .sb-name { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body.print-squad .sb3-bname, body.print-squad .sb3-title b { color: #000; }
 }
+
+/* photo always fills the circle exactly (a % height inside a grid cell resolves against the image itself) */
+.sb-face img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* phones: the page must scroll over the pitch grass and the bench; only the player tokens grab the finger */
+.sb3-pitch { touch-action: pan-y pinch-zoom; }
+.sb3-pitch .sb-token { touch-action: none; }
+.sb3-pitch .sb-token.empty { touch-action: manipulation; }
+.sb3-brow, .sb3-brow .sb-token { touch-action: pan-y; -webkit-touch-callout: none; }
+.sb3-brow.armed { background: color-mix(in srgb, #f5c542 22%, transparent); transform: scale(1.02); transition: transform 0.12s; }
+@media (max-width: 520px) {
+  .sb3-pitch { width: 100%; max-width: 100%; }
+  .sb3-bench { padding: 10px; }
+  .sb3-brow { grid-template-columns: 38px minmax(0, 1fr) auto; padding: 8px 4px; }
+  .sb3-tools { width: 100%; }
+  .sb3-tools .sb3-select { flex: 1 1 100%; }
+  .sb3-tools .sb3-select select { width: 100%; }
+}

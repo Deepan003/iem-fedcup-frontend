@@ -1,0 +1,63 @@
+/* ---------- player page: profile + bid history ---------- */
+.story { position: fixed; inset: 0; z-index: 140; display: grid; place-items: center; padding: 16px; background: rgba(4, 4, 5, 0.82); animation: fade-up 0.22s var(--ease) both; overscroll-behavior: contain; }
+.story-card { position: relative; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; width: min(560px, 100%); max-height: min(90vh, 900px); max-height: min(90dvh, 900px); overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 22px; background: #101012; border: 1px solid var(--rule-2); border-top: 4px solid var(--tc); box-shadow: 0 40px 100px -30px #000; scrollbar-width: thin; }
+.story-x { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.06); color: var(--bone); font-size: 15px; cursor: pointer; }
+.story-x:hover { background: rgba(255, 255, 255, 0.14); }
+.story-load { display: grid; place-items: center; min-height: 220px; }
+
+.story-head { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; padding-right: 30px; }
+.story-photo { position: relative; width: 112px; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 4px; background: #1a1a1d; box-shadow: 0 0 0 2px var(--tc), 0 14px 30px -12px #000; display: grid; place-items: center; }
+.story-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; }
+.story-photo span { font-family: var(--display); font-weight: 900; font-size: 40px; color: rgba(255, 255, 255, 0.8); }
+.story-photo::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.35); }
+.story-who { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.story-who h2 { margin: 0; font-family: var(--display); font-weight: 900; font-size: clamp(28px, 7vw, 40px); line-height: 0.95; text-transform: uppercase; overflow-wrap: anywhere; }
+.story-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+.story-tier { padding: 3px 8px; border-radius: 2px; background: var(--tier); color: #111; font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.story .stamp { transform: none; }
+.stamp.live { color: var(--signal); animation: story-blink 1.4s ease-in-out infinite; }
+@keyframes story-blink { 50% { opacity: 0.45; } }
+
+.story-result { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: color-mix(in srgb, var(--tc) 12%, #141416); border-left: 3px solid var(--tc); }
+.story-result > div { display: flex; flex-direction: column; min-width: 0; }
+.story-result b { font-size: 18px; overflow-wrap: anywhere; }
+.story-price { margin-left: auto; font-family: var(--display); font-weight: 900; font-size: 30px; line-height: 1; white-space: nowrap; }
+
+.story-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.story-stats > div { display: flex; flex-direction: column; align-items: center; padding: 10px 6px; background: rgba(255, 255, 255, 0.04); }
+.story-stats b { font-family: var(--display); font-weight: 900; font-size: 28px; line-height: 1; }
+
+.story-lots { display: flex; flex-direction: column; gap: 14px; }
+.story-empty { margin: 4px 0; }
+.story-lot h3 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 6px; font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.story-lot.is-live h3 .tiny { color: var(--signal); }
+.story-bids { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.story-bids li { display: grid; grid-template-columns: 26px 22px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 8px; border-left: 3px solid var(--c); border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 9%, transparent), transparent 60%); }
+.story-bids li.win { background: linear-gradient(90deg, color-mix(in srgb, var(--c) 26%, transparent), transparent 80%); }
+.story-bids li.win .story-amt { color: #f5c542; }
+.story-n { font-family: var(--mono); font-size: 11px; color: var(--dim); text-align: right; }
+.story-team { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; line-height: 1.2; }
+.story-amt { font-family: var(--mono); font-weight: 700; font-size: 14px; white-space: nowrap; }
+.story-t { min-width: 64px; text-align: right; white-space: nowrap; }
+.story-bids li.win .story-t { color: #f5c542; font-weight: 800; letter-spacing: 0.08em; }
+
+.story-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 4px; border-top: 1px solid var(--rule); }
+
+/* the list row opens the player's page: make it feel tappable */
+.result.tap { cursor: pointer; transition: background 0.15s; }
+.result.tap:hover { background: rgba(255, 255, 255, 0.03); }
+.result.tap:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.result .hist { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+
+@media (max-width: 560px) {
+  .story { padding: 0; place-items: end center; }
+  .story-card { width: 100%; max-height: 92vh; max-height: 92dvh; padding: 18px 14px calc(18px + env(safe-area-inset-bottom)); border-left: 0; border-right: 0; border-bottom: 0; animation: story-up 0.28s var(--ease) both; }
+  .story-head { grid-template-columns: 88px minmax(0, 1fr); gap: 12px; }
+  .story-photo { width: 88px; }
+  .story-bids li { grid-template-columns: 20px 22px minmax(0, 1fr) auto; gap: 0 8px; padding: 6px; }
+  .story-t { font-size: 10px; }
+  .story-t { grid-column: 3 / -1; text-align: left; min-width: 0; margin-top: -4px; }
+  .story-price { font-size: 24px; }
+}
+@keyframes story-up { from { transform: translateY(40px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .story, .story-card, .stamp.live { animation: none; } }

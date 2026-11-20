@@ -6,6 +6,7 @@ import { money, POSITIONS, initials, setMoneyDecimals,
 import { Spinner, TeamLogo } from '../components/ui.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 import CardStudio, { cardInfo } from '../components/CardStudio.jsx';
+import PlayerStory from '../components/PlayerStory.jsx';
 
 const STATUS = {
   sold: 'Sold', retained: 'Retained', unsold: 'Unsold', available: 'In the pool',
@@ -40,6 +41,14 @@ export default function Portal() {
   const [q, setQ] = useState('');
   const [pos, setPos] = useState('All');
   const [cardFor, setCardFor] = useState(null); // player whose card is open
+  // player whose page (profile + bid history) is open; ?p=<id> links straight to it
+  const [storyId, setStoryId] = useState(() => new URLSearchParams(window.location.search).get('p'));
+  const openStory = (id) => {
+    setStoryId(id);
+    const u = new URL(window.location.href);
+    if (id) u.searchParams.set('p', id); else u.searchParams.delete('p');
+    window.history.replaceState(null, '', u);
+  };
 
   useEffect(() => {
     api('/config').then((c) => { setMoneyDecimals(c.decimals); setConfig(c); }).catch(() => setError('Could not reach the server.'));
@@ -103,6 +112,7 @@ export default function Portal() {
       <div className="sect-head" style={{ marginBottom: 30 }}>
         <span className="idx">Player portal</span>
         <h1 className="big-title"><span className="mask"><span>Find your</span></span><span className="mask"><span style={{ animationDelay: '0.08s' }}><em>name.</em></span></span></h1>
+        <p className="muted" style={{ margin: '10px 0 0', maxWidth: 560 }}>Tap any player to see their profile and every bid made for them, team by team.</p>
       </div>
       <label className="search-line">
         <span className="sr-only">Search players</span>
@@ -119,18 +129,28 @@ export default function Portal() {
             const t = p.teamId ? teamMap[p.teamId] : null;
             const url = assetUrl(p.thumbUrl || p.photoUrl);
             return (
-              <div key={p.id} className="result" style={{ animationDelay: `${Math.min(i, 14) * 25}ms` }}>
+              <div
+                key={p.id}
+                className="result tap"
+                style={{ animationDelay: `${Math.min(i, 14) * 25}ms` }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${p.name}: profile and bid history`}
+                onClick={() => openStory(p.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStory(p.id); } }}
+              >
                 <div className="mini" style={{ width: '100%' }}>{url ? <img src={url} alt="" loading="lazy" /> : <div className="ph" style={{ fontSize: 22 }}>{initials(p.name)}</div>}</div>
                 <div style={{ minWidth: 0 }}>
-                  <div className="nm ellipsis">{p.name}</div>
+                  <div className="nm">{p.name}</div>
                   <div className="row wrap" style={{ gap: 12, marginTop: 6 }}>
                     <span className="tiny">{p.position}{p.year ? ` · ${p.year}` : ''}</span>
                     {t && <span className="row tiny" style={{ gap: 6, color: 'var(--bone)' }}><TeamLogo team={t} size={18} />{t.name}</span>}
                     {p.price != null && <span className="tiny" style={{ color: 'var(--bone)' }}>{money(p.price, config.currency)}</span>}
+                    {['sold', 'unsold'].includes(p.status) && <span className="hist">Bid history →</span>}
                   </div>
                 </div>
                 <span className="row" style={{ gap: 8 }}>
-                  {config.cardsEnabled && <button type="button" className="btn sm card-btn" onClick={() => setCardFor(p)}>🃏 Card</button>}
+                  {config.cardsEnabled && <button type="button" className="btn sm card-btn" onClick={(e) => { e.stopPropagation(); setCardFor(p); }}>🃏 Card</button>}
                   <span className={`stamp ${p.status}`}>{STATUS[p.status] || p.status}</span>
                 </span>
               </div>
@@ -139,6 +159,17 @@ export default function Portal() {
         </div>
       )}
       {live?.status === 'live' && <SoundDock state={live} sound={snd} surface="studio" />}
+      {storyId && (
+        <PlayerStory
+          id={storyId}
+          code={code}
+          teamMap={teamMap}
+          currency={config.currency}
+          live={live}
+          onClose={() => openStory(null)}
+          onCard={config.cardsEnabled ? () => { const pl = players?.find((x) => x.id === storyId); if (pl) setCardFor(pl); } : null}
+        />
+      )}
       {cardFor && <CardStudio info={cardInfo(cardFor, cardFor.teamId ? teamMap[cardFor.teamId] : null, config.currency)} onClose={() => setCardFor(null)} />}
     </main>
   );

@@ -160,22 +160,53 @@ export default function SquadBuilder({
   };
 
   // drag that works with mouse AND touch (pointer events), falls back to a tap if it barely moved
+  // On a phone the bench is a scrolling list: a quick swipe scrolls the page, press-and-hold (250 ms) picks the player up.
   const startDrag = (e, pid, from) => {
     if (e.button != null && e.button !== 0) return;
-    const start = { id: pid, from, x0: e.clientX, y0: e.clientY, moved: false };
+    const holdFirst = e.pointerType === 'touch' && from === 'bench';
+    const row = e.currentTarget;
+    const start = {
+      id: pid, from, x0: e.clientX, y0: e.clientY, moved: false, armed: !holdFirst, timer: null,
+    };
     dragRef.current = start;
-    const move = (ev) => {
+    // while armed, stop the browser from turning the finger's movement into a scroll
+    const blockScroll = (ev) => { if (dragRef.current?.armed && ev.cancelable) ev.preventDefault(); };
+    if (holdFirst) {
+      start.timer = setTimeout(() => {
+        if (dragRef.current !== start) return;
+        start.armed = true;
+        row?.classList.add('armed');
+        navigator.vibrate?.(12);
+      }, 250);
+    }
+    const cleanup = () => {
+      clearTimeout(start.timer);
+      row?.classList.remove('armed');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+      window.removeEventListener('touchmove', blockScroll);
+    };
+    function move(ev) {
       const d = dragRef.current;
       if (!d) return;
-      if (!d.moved && Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 7) return;
+      const far = Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) >= 7;
+      if (!d.armed) { // moved before the hold finished: it is a scroll, let the page have it
+        if (far) { dragRef.current = null; cleanup(); }
+        return;
+      }
+      if (!d.moved && !far) return;
       d.moved = true;
       ev.preventDefault();
       setDrag({ id: d.id, from: d.from, x: ev.clientX, y: ev.clientY });
-    };
-    const up = (ev) => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
+    }
+    function cancel() { // the browser took the touch (scroll / zoom): never treat that as a tap
+      dragRef.current = null;
+      cleanup();
+      setDrag(null);
+    }
+    function up(ev) {
+      cleanup();
       const d = dragRef.current;
       dragRef.current = null;
       setDrag(null);
@@ -187,10 +218,11 @@ export default function SquadBuilder({
       if (where === 'bench') toBench(d.id);
       else place(d.id, where);
       setSel(null);
-    };
+    }
     window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    window.addEventListener('pointercancel', cancel);
+    window.addEventListener('touchmove', blockScroll, { passive: false });
   };
 
   useEffect(() => {
