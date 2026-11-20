@@ -974,3 +974,19 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
 
 /* position badge over a photo (DEF / MID / FWD / GK): a dark chip with a coloured edge, readable on any photo */
 .pcard .pos-badge { display: inline-block; padding: 5px 10px 4px; border-radius: 3px; background: rgba(8, 8, 10, 0.82); box-shadow: inset 4px 0 0 currentColor, 0 4px 14px rgba(0, 0, 0, 0.45); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+/* keyboard shortcut keycaps v2: a solid keycap in its own reserved space on the right of the button,
+   never on top of the text, readable on any button colour */
+@media (hover: hover) and (pointer: fine) {
+  [data-kbd-label]:not(.bid-btn) { padding-right: 40px !important; }
+  [data-kbd-label]::after {
+    top: 50%; right: 9px; transform: translateY(-50%);
+    min-width: 20px; padding: 3px 6px; box-sizing: border-box; text-align: center;
+    border: 0; border-radius: 4px; opacity: 1;
+    background: #f4f1ea; color: #111114;
+    font-size: 11px; font-weight: 800; letter-spacing: 0; line-height: 1.2; white-space: nowrap;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  }
+  .bid-btn[data-kbd-label]::after { top: 10px; right: 12px; transform: none; font-size: 12px; padding: 4px 8px; }
+  [data-kbd-label]:disabled::after, [data-kbd-label][aria-disabled="true"]::after { background: #8b8a86; }
+}
