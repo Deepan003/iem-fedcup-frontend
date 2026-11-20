@@ -1,3 +1,4 @@
+import TeamCards from '../components/TeamCards.jsx';
 import {
   useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
@@ -32,18 +33,6 @@ function Ball({ className }) {
   );
 }
 
-function Jersey({ color, text, number }) {
-  return (
-    <svg viewBox="0 0 100 100" aria-hidden="true">
-      <path d="M33 8 L44 4 Q50 11 56 4 L67 8 L92 24 L82 42 L72 36 L72 95 L28 95 L28 36 L18 42 L8 24 Z" fill={color} stroke="rgba(0,0,0,.35)" strokeWidth="1.5" />
-      <path d="M44 4 Q50 11 56 4" fill="none" stroke="rgba(0,0,0,.35)" strokeWidth="2" />
-      <text x="50" y="40" textAnchor="middle" fontFamily="Big Shoulders Display, Impact, sans-serif" fontWeight="900" fontSize="9" fill={text} letterSpacing="1">{(number.label || '').toUpperCase().slice(0, 12)}</text>
-      <text x="50" y="76" textAnchor="middle" fontFamily="Big Shoulders Display, Impact, sans-serif" fontWeight="900" fontSize="34" fill={text}>{number.n}</text>
-    </svg>
-  );
-}
-
-/** Scroll progress as a match clock: 00' → 90' with a ball rolling the touchline. */
 function MatchClock() {
   const ref = useRef(null);
   useEffect(() => {
@@ -339,7 +328,6 @@ export default function Landing() {
   const [showIntro] = useState(() => !sessionStorage.getItem('fedcup.intro'));
   const [ready, setReady] = useState(!showIntro);
   const [scenePrice, setScenePrice] = useState(40);
-  const [flipped, setFlipped] = useState(null);
 
   useEffect(() => {
     sessionStorage.setItem('fedcup.intro', '1');
@@ -694,40 +682,9 @@ export default function Landing() {
           <div className="container">
             <div className="sect-head">
               <span className="idx">75' — The clubs</span>
-              <Lines className="big-title" lines={[`${teams.length} captains.`, <>Same <em>purse.</em></>]} />
+              <Lines className="big-title" lines={[`${teams.length} clubs.`, <>One <em>crown.</em></>]} />
             </div>
-            <div className="teams-grid">
-              {teams.map((t, i) => {
-                const fg = onColor(t.color);
-                return (
-                  <div
-                    key={t.id}
-                    className={`team-tile ${flipped === t.id ? 'flipped' : ''}`}
-                    style={{ '--c': t.color, '--fg': fg }}
-                    onClick={() => setFlipped((f) => (f === t.id ? null : t.id))}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`${t.name} — show kit`}
-                  >
-                    <div className="tile-inner">
-                      <div className="tile-face">
-                        <div className="row" style={{ justifyContent: 'space-between' }}>
-                          <span className="label">Club {String(i + 1).padStart(2, '0')}</span>
-                          <span className="label">{t.shortName}</span>
-                        </div>
-                        <TeamLogo team={t} size={84} />
-                        <h3>{t.name}</h3>
-                      </div>
-                      <div className="tile-face tile-back">
-                        <Jersey color={t.color} text={fg} number={{ n: String(i + 1).padStart(2, '0'), label: t.shortName || t.name }} />
-                        <span className="kit-name">{t.name}</span>
-                        <span className="label" style={{ color: 'inherit', opacity: 0.75, position: 'relative' }}>Home kit · Season 5</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <TeamCards teams={teams} />
           </div>
         </section>
       )}
