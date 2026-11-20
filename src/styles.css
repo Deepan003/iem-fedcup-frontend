@@ -1023,3 +1023,5 @@ td .chip, td .ret-row, td [class*="ret"] { min-width: 0; }
 /* photo-card chips as frosted glass: the photo shows through, a blur + edge keeps the letters readable */
 .pcard-top .pos-badge { background: rgba(10, 10, 12, 0.34) !important; -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); border: 1px solid rgba(255, 255, 255, 0.18); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85); box-shadow: inset 4px 0 0 currentColor, 0 6px 18px rgba(0, 0, 0, 0.3) !important; }
 .pcard-top .tier-badge { background: color-mix(in srgb, var(--tier) 30%, rgba(10, 10, 12, 0.22)) !important; color: #fff !important; -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); border: 1px solid color-mix(in srgb, var(--tier) 85%, #fff); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+/* landing page: the top bar gets a background once it sits over the scrolling animated text */
+.nav.solid { background: color-mix(in srgb, var(--ink, #0b0b0c) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }

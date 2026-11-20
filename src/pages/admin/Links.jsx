@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Spinner, TeamLogo, useAction, useToast } from '../../components/ui.jsx';
 import { useAdmin } from './AdminApp.jsx';
+import { useConfirm } from '../../components/Dialog.jsx';
 
 const origin = () => window.location.origin;
 
@@ -52,6 +53,7 @@ export default function Links() {
   const { call, auction } = useAdmin();
   const toast = useToast();
   const [run, busy] = useAction();
+  const ask = useConfirm();
   const [teams, setTeams] = useState(null);
   const [portalMode, setPortalMode] = useState('public');
   const title = auction.state?.studio?.title || 'IEM FED Cup Auction';
@@ -94,6 +96,32 @@ export default function Links() {
     if (missing.length) toast(`No password yet: ${missing.join(', ')}`, 'error', 6000);
   });
 
+  // new passwords for every team in one go: all captains are signed out, the new invites are copied + saved as a file
+  const resetAll = async () => {
+    if (!teams?.length) return;
+    const ok = await ask({
+      title: `Reset ALL ${teams.length} captain passwords?`,
+      message: 'Every team gets a new password at once. All captains are signed out immediately and must sign in again with the new password (during a live auction they cannot bid until they are back in). The new invites are copied and saved as a text file for you.',
+      tone: 'danger', confirmLabel: 'Reset all passwords',
+    });
+    if (!ok) return;
+    run(async () => {
+      const parts = [];
+      for (const t of teams) {
+        // eslint-disable-next-line no-await-in-loop
+        const { password } = await call(`/admin/teams/${t.id}/password`, { method: 'POST', body: {} });
+        parts.push(inviteText(t, `${origin()}${captainPath(t)}`, password, title));
+      }
+      load();
+      const text = parts.join('\n\n────────────\n\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+      a.download = 'FED Cup - new captain passwords.txt'; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      await copy(text, `${parts.length} new invites`);
+    }, `New passwords for all ${teams.length} teams`);
+  };
+
   if (!teams) return <Spinner />;
   const portalHint = portalMode === 'off'
     ? 'The portal is currently CLOSED (Rules & views). Visitors see a "closed" page.'
@@ -128,7 +156,10 @@ export default function Links() {
         <div className="card stack">
           <div className="ret-head">
             <h2 style={{ margin: 0 }}>Captains</h2>
-            <button type="button" className="btn sm primary" disabled={busy || !teams.length} onClick={copyAll}>Copy all invites</button>
+            <span className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="btn sm danger" disabled={busy || !teams.length} onClick={resetAll} title="New password for every team at once">⟲ Reset all passwords</button>
+              <button type="button" className="btn sm primary" disabled={busy || !teams.length} onClick={copyAll}>Copy all invites</button>
+            </span>
           </div>
           <p className="muted small" style={{ margin: 0 }}>Each link opens the captain room with that team already selected. &quot;Copy invite&quot; adds the password and short instructions, ready to paste into WhatsApp. Send each invite only to that team&apos;s captain.</p>
           {teams.length === 0 && <p className="muted small">No teams yet. Add them on the Teams page.</p>}
