@@ -25,3 +25,28 @@
 .assign-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr); gap: 10px; }
 .assign-grid .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 @media (max-width: 760px) { .assign-grid { grid-template-columns: 1fr; } .ps-card { width: 88px; } }
+
+/* compact slider + hide/show */
+.pslider { padding: 10px 14px 8px; }
+.pslider.closed { padding-bottom: 10px; }
+.pslider .ps-head { margin-bottom: 8px; gap: 8px 12px; flex-wrap: nowrap; }
+.pslider.closed .ps-head { margin-bottom: 0; }
+.ps-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--bone); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
+.ps-toggle .muted { font-weight: 500; letter-spacing: .06em; }
+.ps-caret { width: 12px; color: var(--dim); }
+.pslider .ps-jumps { flex: 1 1 auto; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.pslider .ps-jump { padding: 3px 8px; font-size: 10.5px; white-space: nowrap; }
+.ps-actions { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.ps-picked { max-width: 150px; font-size: 12px; font-weight: 700; color: var(--bone); }
+.ps-arrow { padding-inline: 8px !important; }
+.ps-hide { flex: none; margin-left: auto; }
+.pslider .ps-track { gap: 12px; padding: 0 0 6px; }
+.pslider .ps-group { gap: 4px; padding-top: 4px; border-top-width: 2px; }
+.pslider .ps-glabel { font-size: 9.5px; }
+.pslider .ps-cards { gap: 6px; }
+.pslider .ps-card { width: 76px; gap: 2px; padding: 4px; }
+.pslider .ps-ph { font-size: 18px; }
+.pslider .ps-next { top: 7px; left: 7px; padding: 0 4px; font-size: 8.5px; }
+.pslider .ps-nm { font-size: 11px; line-height: 1.15; min-height: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.pslider .ps-meta { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 900px) { .pslider .ps-head { flex-wrap: wrap; } .ps-hide { margin-left: 0; } }

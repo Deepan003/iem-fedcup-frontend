@@ -13,6 +13,8 @@ export function PlayerSlider({ state, busy, canLoad, onLoad }) {
   const queue = state?.upcoming || [];
   const unsold = state?.unsold || [];
   const [picked, setPicked] = useState('');
+  const [open, setOpen] = useState(() => localStorage.getItem('fedcup.ctl.slider') !== 'off');
+  const toggle = () => setOpen((o) => { localStorage.setItem('fedcup.ctl.slider', o ? 'off' : 'on'); return !o; });
   const track = useRef(null);
   const groups = useMemo(() => {
     const out = [];
@@ -48,58 +50,66 @@ export function PlayerSlider({ state, busy, canLoad, onLoad }) {
 
   if (!queue.length && !unsold.length) return null;
   return (
-    <section className="card pslider" aria-label="Players in the queue">
+    <section className={`card pslider ${open ? '' : 'closed'}`} aria-label="Players in the queue">
       <div className="ps-head">
-        <h2 style={{ margin: 0 }}>Players <span className="muted small">· {queue.length} in the queue{unsold.length ? ` · ${unsold.length} unsold` : ''}</span></h2>
-        <div className="ps-jumps" role="group" aria-label="Jump to a position">
-          {groups.map((g, i) => {
+        <button type="button" className="ps-toggle" onClick={toggle} aria-expanded={open} title={open ? 'Hide the player slider' : 'Show the player slider'}>
+          <span className="ps-caret" aria-hidden="true">{open ? '▾' : '▸'}</span>
+          Players <span className="muted">· {queue.length} queue{unsold.length ? ` · ${unsold.length} unsold` : ''}</span>
+        </button>
+        {open && (
+          <div className="ps-jumps" role="group" aria-label="Jump to a position">
+            {groups.map((g, i) => {
+              const m = POS_META[g.pos];
+              return (
+                <button key={`${g.pos}-${i}`} type="button" className="ps-jump" style={{ '--c': m?.color || '#9ca3af' }} onClick={() => jump(`${g.pos}-${i}`)}>
+                  {m?.short || 'UNSOLD'} <b>{g.list.length}</b>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {open && (
+          <span className="ps-actions">
+            {pickedP && <span className="ps-picked ellipsis" title={pickedP.name}>{pickedP.name}</span>}
+            <button type="button" className="btn primary sm" disabled={busy || !picked || !canLoad} onClick={() => { onLoad(picked); setPicked(''); }}>Load picked</button>
+            <button type="button" className="btn sm ghost ps-arrow" onClick={() => by(-1)} aria-label="Slide left">{'‹'}</button>
+            <button type="button" className="btn sm ghost ps-arrow" onClick={() => by(1)} aria-label="Slide right">{'›'}</button>
+          </span>
+        )}
+        <button type="button" className="btn sm ghost ps-hide" onClick={toggle}>{open ? 'Hide' : 'Show'}</button>
+      </div>
+      {open && (
+        <div className="ps-track" ref={track} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up}>
+          {groups.map((g, gi) => {
             const m = POS_META[g.pos];
             return (
-              <button key={`${g.pos}-${i}`} type="button" className="ps-jump" style={{ '--c': m?.color || '#9ca3af' }} onClick={() => jump(`${g.pos}-${i}`)}>
-                {m?.short || 'UNSOLD'} <b>{g.list.length}</b>
-              </button>
+              <div key={`${g.pos}-${gi}`} className="ps-group" data-group={`${g.pos}-${gi}`} style={{ '--c': m?.color || '#9ca3af' }}>
+                <span className="ps-glabel">{m?.word || 'Unsold'} · {g.list.length}</span>
+                <div className="ps-cards">
+                  {g.list.map((p, i) => {
+                    const url = assetUrl(p.thumbUrl || p.photoUrl);
+                    const first = gi === 0 && i === 0 && g.pos !== 'Unsold';
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`ps-card ${picked === p.id ? 'on' : ''} ${first ? 'next' : ''}`}
+                        onClick={() => { if (!drag.current?.moved) setPicked(picked === p.id ? '' : p.id); }}
+                        title={`${p.name} · ${p.position}${p.tier ? ` · ${p.tier}` : ''}`}
+                      >
+                        <span className="ps-ph">{url ? <img src={url} alt="" loading="lazy" draggable={false} /> : <span>{initials(p.name)}</span>}</span>
+                        {first && <span className="ps-next">Next</span>}
+                        <span className="ps-nm">{p.name}</span>
+                        <span className="ps-meta">{POS_META[p.position]?.short}{p.tier ? ` · ${p.tier}` : ''}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
-        <span className="ps-arrows">
-          <button type="button" className="btn sm ghost" onClick={() => by(-1)} aria-label="Slide left">‹</button>
-          <button type="button" className="btn sm ghost" onClick={() => by(1)} aria-label="Slide right">›</button>
-        </span>
-      </div>
-      <div className="ps-track" ref={track} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up}>
-        {groups.map((g, gi) => {
-          const m = POS_META[g.pos];
-          return (
-            <div key={`${g.pos}-${gi}`} className="ps-group" data-group={`${g.pos}-${gi}`} style={{ '--c': m?.color || '#9ca3af' }}>
-              <span className="ps-glabel">{m?.word || 'Unsold'} · {g.list.length}</span>
-              <div className="ps-cards">
-                {g.list.map((p, i) => {
-                  const url = assetUrl(p.thumbUrl || p.photoUrl);
-                  const first = gi === 0 && i === 0 && g.pos !== 'Unsold';
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`ps-card ${picked === p.id ? 'on' : ''} ${first ? 'next' : ''}`}
-                      onClick={() => { if (!drag.current?.moved) setPicked(picked === p.id ? '' : p.id); }}
-                      title={`${p.name} · ${p.position}${p.tier ? ` · ${p.tier}` : ''}`}
-                    >
-                      <span className="ps-ph">{url ? <img src={url} alt="" loading="lazy" draggable={false} /> : <span>{initials(p.name)}</span>}</span>
-                      {first && <span className="ps-next">Next</span>}
-                      <span className="ps-nm">{p.name}</span>
-                      <span className="ps-meta">{POS_META[p.position]?.short}{p.tier ? ` · ${p.tier}` : ''}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="ps-foot">
-        <span className="small muted ellipsis">{pickedP ? <>Picked: <b style={{ color: 'var(--bone)' }}>{pickedP.name}</b></> : 'Tap a player to pick them, or use “Next player”.'}</span>
-        <button type="button" className="btn primary sm" disabled={busy || !picked || !canLoad} onClick={() => { onLoad(picked); setPicked(''); }}>Load picked player</button>
-      </div>
+      )}
     </section>
   );
 }
