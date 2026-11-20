@@ -61,7 +61,7 @@ export default function Studio() {
         <div className="auth-wrap"><Spinner /></div>
       ) : (
         <main className="container studio">
-          <PositionNow state={state} />
+          <PositionNow state={state} slim />
           <div className="studio-grid">
             <LotStage state={state} now={now} />
             <aside className="stack" style={{ gap: 28 }}>

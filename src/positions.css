@@ -49,3 +49,21 @@
 @keyframes pi-in { from { opacity: 0; } }
 @keyframes pi-in-c { from { opacity: 0; transform: translateY(20px) scale(.96); } }
 @media (prefers-reduced-motion: reduce) { .pn-live, .pn-now { animation: none; } }
+
+/* slim (studio): one line, ~44px — never pushes the lot info down */
+.studio > .posnow.slim { margin: 0 0 calc(10px - clamp(26px, 4vw, 48px)); }
+.posnow.slim { grid-template-columns: auto minmax(0, 1fr); min-height: 0; }
+.posnow.slim .pn-head { flex-direction: row; align-items: center; gap: 10px; padding: 6px 16px 6px 16px; }
+.posnow.slim .pn-k { font-size: 10px; letter-spacing: .14em; }
+.posnow.slim .pn-now { font-size: 22px; line-height: 1; }
+.posnow.slim .pn-seg { flex-direction: row; align-items: center; gap: 8px; padding: 6px 12px; }
+.posnow.slim .pn-name { font-size: 14px; flex: none; }
+.posnow.slim .pn-count { font-size: 11px; flex: none; }
+.posnow.slim .pn-bar { flex: 1 1 auto; min-width: 16px; }
+@media (max-width: 760px) {
+  .posnow.slim { grid-template-columns: 1fr; }
+  .posnow.slim .pn-head { justify-content: flex-start; padding: 6px 12px; }
+  .posnow.slim .pn-now { font-size: 18px; }
+  .posnow.slim .pn-seg { flex-direction: column; align-items: flex-start; gap: 2px; padding: 5px 8px; }
+  .posnow.slim .pn-bar { width: 100%; }
+}

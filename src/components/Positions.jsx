@@ -33,14 +33,14 @@ function ordered(state) {
  * "NOW AUCTIONING · DEFENDERS" — a segmented strip, one segment per position:
  * done (✓, dim) · live now (position colour, pulsing) · still to come.
  */
-export function PositionNow({ state, compact = false }) {
+export function PositionNow({ state, compact = false, slim = false }) {
   const by = state?.stats?.byPosition;
   if (!by || !Object.keys(by).length) return null;
   const cur = currentPosition(state);
   const list = ordered(state);
   const m = POS_META[cur];
   return (
-    <section className={`posnow ${compact ? 'compact' : ''}`} style={{ '--pc': m?.color || '#efebe3' }} aria-label={cur ? `Now auctioning ${m?.word}` : 'Auction order'}>
+    <section className={`posnow ${compact ? 'compact' : ''} ${slim ? 'slim' : ''}`} style={{ '--pc': m?.color || '#efebe3' }} aria-label={cur ? `Now auctioning ${m?.word}` : 'Auction order'}>
       <div className="pn-head">
         <span className="pn-k"><i className="pn-live" aria-hidden="true" />{state?.mode === 'unsold' || state?.round > 1 ? 'Unsold round · now' : 'Now auctioning'}</span>
         <b key={cur} className="pn-now">{m?.word || 'Up next'}</b>
@@ -54,8 +54,8 @@ export function PositionNow({ state, compact = false }) {
           const pct = b.total ? ((b.total - b.left) / b.total) * 100 : 0;
           return (
             <li key={p} className={`pn-seg ${live ? 'live' : ''} ${done ? 'done' : ''}`} style={{ '--c': meta.color }} aria-current={live ? 'step' : undefined}>
-              <span className="pn-name">{done && <span aria-hidden="true">✓ </span>}{compact ? meta.short : meta.word}</span>
-              <span className="pn-count"><b>{b.left}</b> left of {b.total}</span>
+              <span className="pn-name">{done && <span aria-hidden="true">✓ </span>}{compact || slim ? meta.short : meta.word}</span>
+              <span className="pn-count"><b>{b.left}</b>{slim ? `/${b.total}` : ` left of ${b.total}`}</span>
               <span className="pn-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></span>
             </li>
           );
