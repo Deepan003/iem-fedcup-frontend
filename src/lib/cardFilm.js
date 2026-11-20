@@ -124,7 +124,7 @@ export function drawFilmFrame(ctx, W, H, t, s) {
     const cy = H * 0.5 + lift + bob - exit * H * 0.05;
     const foil = t < 2.2 ? null : ((t - 2.2) / 2.1) % 1; // still on entry, then sweeping
     s.cctx.clearRect(0, 0, CARD_W, CARD_H);
-    if (s.renderCard) s.renderCard(s.cctx, foil); else drawCard(s.cctx, info, s.assets, foil);
+    drawCard(s.cctx, info, s.assets, foil);
     const fx = Math.max(0.02, flip);
     ctx.save();
     ctx.globalAlpha = seg(t, 1.45, 1.7) * (1 - exit);
@@ -239,7 +239,7 @@ async function scoreAudio(lead) {
  * Record the film. ratio: '9x16' | '1x1'. onProgress(0..1). Returns { blob, ext } or null if this
  * browser can't record video.
  */
-export async function cardFilm(info, { ratio = '9x16', onProgress, renderCard = null, color = null } = {}) {
+export async function cardFilm(info, { ratio = '9x16', onProgress } = {}) {
   const mime = filmMime();
   if (!mime) return null;
   const W = 1080;
@@ -251,13 +251,11 @@ export async function cardFilm(info, { ratio = '9x16', onProgress, renderCard = 
   const card = document.createElement('canvas');
   card.width = CARD_W; card.height = CARD_H;
   const [assets, crest] = await Promise.all([
-    renderCard ? null : loadCardAssets(info.player, info.team),
+    loadCardAssets(info.player, info.team),
     loadImage(`${window.location.origin}/brand/crest.webp`),
   ]);
   try { await document.fonts?.load(`700 30px ${MONO}`); } catch { /* fallback font */ }
-  const s = {
-    c: hexRgb(color || info.team?.color || info.tierColor), card, cctx: card.getContext('2d'), crest, info, assets, renderCard,
-  };
+  const s = { c: hexRgb(info.team?.color || info.tierColor), card, cctx: card.getContext('2d'), crest, info, assets };
   drawFilmFrame(ctx, W, H, 0, s);
 
   const LEAD = 0.3; // seconds between recorder start and t = 0, so the first frame is never lost
