@@ -285,3 +285,14 @@
 .ss-squad { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
 .ss-squad li { align-items: center; }
 .ss-rinfo b, .ss-step b, .pos-ann b { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* retained slide on laptop screens (e.g. MacBook ~1280–1512px wide, short height): size the cards by width too,
+   so they never slide over the team name; the name column always keeps at least 30% of the slide */
+.ss-retained.few { grid-template-columns: minmax(30%, 1fr) auto; }
+.ss-retained.few .ss-head { min-width: 0; }
+.ss-retained.few .ss-h { overflow-wrap: anywhere; }
+.ss-rcards.n3 .ss-rcard { --h: min(54vh, 560px, 21vw); }
+.ss-rcards.n2 .ss-rcard { --h: min(54vh, 560px, 29vw); }
+.ss-rcards.n1 .ss-rcard { --h: min(54vh, 560px, 40vw); }
+.ss-rcards.n4 .ss-rcard { --h: min(40vh, 17vw); }
+@media (max-width: 1500px) { .ss-retained.few .ss-h { font-size: clamp(44px, min(6.4vw, 12vh), 120px); } }
