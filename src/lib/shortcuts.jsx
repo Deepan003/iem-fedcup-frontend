@@ -26,7 +26,9 @@ export function useShortcuts({ enabled = true } = {}) {
       if (e.repeat) return; // holding a key never fires twice
       if (document.querySelector('[aria-modal="true"]')) return; // a confirm dialog handles its own keys
       const id = keyId(e);
-      const btn = [...document.querySelectorAll(`[data-kbd="${CSS.escape(id)}"]`)]
+      // a letter works with or without Shift (labels show plain letters; destructive actions confirm first)
+      const alt = id.startsWith('shift+') ? id.slice(6) : `shift+${id}`;
+      const btn = [...document.querySelectorAll(`[data-kbd="${CSS.escape(id)}"], [data-kbd="${CSS.escape(alt)}"]`)]
         .find((b) => !b.disabled && b.offsetParent !== null);
       if (!btn) return;
       e.preventDefault();
@@ -75,7 +77,7 @@ export function ShortcutHelp({
           {extra.map(([k, name]) => <li key={k}><kbd>{k}</kbd><span>{name}</span></li>)}
           <li><kbd>?</kbd><span>Show / hide this list</span></li>
         </ul>
-        <p className="muted small" style={{ margin: 0 }}>Keys only work when that button is on screen. Keys with ⇧ (Shift) are for final actions. Holding a key never repeats it.</p>
+        <p className="muted small" style={{ margin: 0 }}>Keys only work when that button is on screen. Final actions (sold, unsold, undo, reset) always ask you to confirm. Holding a key never repeats it.</p>
       </div>
     </div>
   );

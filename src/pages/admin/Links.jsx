@@ -138,7 +138,7 @@ export default function Links() {
               <div key={t.id} className="link-row" style={{ '--c': t.color }}>
                 <TeamLogo team={t} size={36} />
                 <div className="grow" style={{ minWidth: 0 }}>
-                  <b className="ellipsis" style={{ display: 'block' }}>{t.name}</b>
+                  <b style={{ display: "block", overflowWrap: "anywhere" }}>{t.name}</b>
                   <a className="link-url ellipsis" href={captainPath(t)} target="_blank" rel="noreferrer">{url}</a>
                   {!t.hasPassword && <div className="small" style={{ color: 'var(--amber)' }}>No password yet: the captain cannot sign in.</div>}
                 </div>

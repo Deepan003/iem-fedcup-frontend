@@ -86,7 +86,7 @@ export default function RetainedEditor({ team, liveTeam, players, currency, onSa
               {p.thumbUrl && <button type="button" className="ret-adjust" title="Adjust photo" aria-label={`Adjust ${p.name}'s photo`} onClick={() => setAdjust({ source: storedPhoto(p.id, token), title: p.name, onApply: uploadFor(p.id) })}>⤢</button>}
             </span>
             <div className="grow" style={{ minWidth: 0 }}>
-              <b className="ellipsis" style={{ display: 'block' }}>{p.name} {p.isCaptain && <span className="cap-badge">C</span>}</b>
+              <b style={{ display: 'block', overflowWrap: 'anywhere', lineHeight: 1.2 }}>{p.name} {p.isCaptain && <span className="cap-badge">C</span>}</b>
               <span className="tiny">{POS_SHORT[p.position]}{p.department ? ` · ${p.department}` : ''}{p.year ? ` · ${p.year}` : ''}</span>
             </div>
             <b className="mono small">{p.isCaptain ? 'Free' : money(p.price, currency)}</b>

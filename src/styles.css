@@ -990,3 +990,36 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
   .bid-btn[data-kbd-label]::after { top: 10px; right: 12px; transform: none; font-size: 12px; padding: 4px 8px; }
   [data-kbd-label]:disabled::after, [data-kbd-label][aria-disabled="true"]::after { background: #8b8a86; }
 }
+
+/* ---------- layout audit fixes (all screens) ---------- */
+/* highest-bidder strip: label sits clear above the team name, long names wrap instead of "…" */
+.lower-third .lt-text .label { display: block; margin-bottom: 4px; line-height: 1.2; }
+.lower-third .lt-name { line-height: 0.95; padding-top: 1px; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+/* names in admin tables / link lists wrap instead of being cut */
+.link-row b.ellipsis, .admin-table b.ellipsis, .table b.ellipsis, td b.ellipsis { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+td .chip, td .ret-row, td [class*="ret"] { min-width: 0; }
+@media (max-width: 760px) {
+  td b.ellipsis { font-size: 13px; }
+  td .mono.small { white-space: nowrap; }
+}
+
+/* ---------- photo-card badges: reveal + quiet foil glint (position chip, tier chip) ---------- */
+.pcard-top .pos-badge, .pcard-top .tier-badge { position: relative; overflow: hidden; isolation: isolate; }
+.pcard-top .pos-badge { padding: 6px 12px 5px 14px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); animation: bdg-in 0.5s 0.15s cubic-bezier(.2, .9, .2, 1) both; }
+.pcard-top .pos-badge .bdg-edge { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: currentColor; box-shadow: 0 0 12px currentColor; transform-origin: 50% 100%; animation: bdg-edge 0.45s 0.25s cubic-bezier(.2, .9, .2, 1) both; }
+.pcard-top .bdg-txt { position: relative; display: inline-block; z-index: 1; }
+.pcard-top .pos-badge .bdg-txt { animation: bdg-wipe 0.6s 0.35s cubic-bezier(.65, 0, .35, 1) both; }
+.pcard-top .bdg-sheen { position: absolute; z-index: 2; top: -20%; bottom: -20%; left: 0; width: 45%; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent); transform: translateX(-140%) skewX(-18deg); animation: bdg-glint 0.9s 0.9s ease-out both, bdg-glint-soft 7s 4s ease-in-out infinite; }
+.pcard-top .tier-badge { box-shadow: 0 0 0 1px color-mix(in srgb, var(--tier) 70%, #fff), 0 6px 20px color-mix(in srgb, var(--tier) 40%, transparent); transform-origin: 50% 0; animation: bdg-flip 0.6s 0.5s cubic-bezier(.2, 1.2, .3, 1) both; }
+.pcard-top .tier-badge .bdg-sheen { animation-delay: 1.15s, 5.5s; }
+@keyframes bdg-in { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes bdg-edge { from { transform: scaleY(0); } }
+@keyframes bdg-wipe { from { clip-path: inset(0 100% 0 0); opacity: .4; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes bdg-flip { from { opacity: 0; transform: perspective(300px) rotateX(-80deg); } }
+@keyframes bdg-glint { to { transform: translateX(320%) skewX(-18deg); } }
+@keyframes bdg-glint-soft { 0%, 82% { transform: translateX(-140%) skewX(-18deg); opacity: .5; } 100% { transform: translateX(320%) skewX(-18deg); opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .pcard-top .pos-badge, .pcard-top .pos-badge *, .pcard-top .tier-badge, .pcard-top .tier-badge * { animation: none !important; } .pcard-top .bdg-sheen { display: none; } }
+
+/* photo-card chips as frosted glass: the photo shows through, a blur + edge keeps the letters readable */
+.pcard-top .pos-badge { background: rgba(10, 10, 12, 0.34) !important; -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); border: 1px solid rgba(255, 255, 255, 0.18); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85); box-shadow: inset 4px 0 0 currentColor, 0 6px 18px rgba(0, 0, 0, 0.3) !important; }
+.pcard-top .tier-badge { background: color-mix(in srgb, var(--tier) 30%, rgba(10, 10, 12, 0.22)) !important; color: #fff !important; -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); border: 1px solid color-mix(in srgb, var(--tier) 85%, #fff); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }

@@ -154,12 +154,12 @@ export function TeamLogo({ team, size = 36, fit }) {
 }
 
 export function PosBadge({ position }) {
-  return <span className="pos-badge" style={{ color: POS_COLOR[position] || 'var(--bone)' }}>{POS_SHORT[position] || position}</span>;
+  return <span className="pos-badge" style={{ color: POS_COLOR[position] || 'var(--bone)' }}><i className="bdg-edge" aria-hidden="true" /><span className="bdg-txt">{POS_SHORT[position] || position}</span><i className="bdg-sheen" aria-hidden="true" /></span>;
 }
 
 export function TierBadge({ tier, color }) {
   if (!tier) return null;
-  return <span className="tier-badge" style={{ background: color ? `linear-gradient(120deg, ${color}, #fff6)` : 'var(--bone)', backgroundColor: color || 'var(--bone)' }}>{tier}</span>;
+  return <span className="tier-badge" style={{ '--tier': color || '#efebe3', background: color ? `linear-gradient(120deg, ${color}, #fff6)` : 'var(--bone)', backgroundColor: color || 'var(--bone)' }}><span className="bdg-txt">{tier}</span><i className="bdg-sheen" aria-hidden="true" /></span>;
 }
 
 /** Trading-card style portrait with 3D tilt, foil sheen on entry and a tier-coloured edge. */
@@ -173,7 +173,7 @@ export function PlayerCard({ player, enter = false, showName = true }) {
         {url ? <img src={url} alt={player.name} decoding="async" /> : <div className="ph">{initials(player.name)}</div>}
         <span className="pcard-edge" />
         <span className="sheen" />
-        <div className="pcard-top">
+        <div className="pcard-top" key={player.id}>
           <PosBadge position={player.position} />
           <TierBadge tier={player.tier} color={player.tierColor} />
         </div>
