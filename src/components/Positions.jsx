@@ -33,7 +33,7 @@ function ordered(state) {
  * "NOW AUCTIONING · DEFENDERS" — a segmented strip, one segment per position:
  * done (✓, dim) · live now (position colour, pulsing) · still to come.
  */
-export function PositionNow({ state, compact = false, slim = false }) {
+export function PositionNow({ state, compact = false, slim = false, total = false }) {
   const by = state?.stats?.byPosition;
   if (!by || !Object.keys(by).length) return null;
   const cur = currentPosition(state);
@@ -44,6 +44,7 @@ export function PositionNow({ state, compact = false, slim = false }) {
       <div className="pn-head">
         <span className="pn-k"><i className="pn-live" aria-hidden="true" />{state?.mode === 'unsold' || state?.round > 1 ? 'Unsold round · now' : 'Now auctioning'}</span>
         <b key={cur} className="pn-now">{m?.word || 'Up next'}</b>
+        {total && state.stats.pool && <span className="pn-total"><b>{state.stats.pool.left}</b>/{state.stats.pool.total} left</span>}
       </div>
       <ol className="pn-segs">
         {list.map((p) => {

@@ -1048,3 +1048,45 @@ td .chip, td .ret-row, td [class*="ret"] { min-width: 0; }
 .card-btn .cb-ic { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 50%; background: #1a1206; color: #f8d77a; font-size: 11px; }
 @keyframes card-shine { 0%, 55% { transform: translateX(-130%); } 85%, 100% { transform: translateX(130%); } }
 @media (prefers-reduced-motion: reduce) { .card-btn::after { animation: none; } }
+
+/* ---------- bid button: keycap badge and press flash no longer share ::after (a disabled button was covered grey) ---------- */
+.bid-btn::after { content: none; }
+.bid-btn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(255, 255, 255, 0.35); transform: scaleX(0); transform-origin: left; pointer-events: none; }
+.bid-btn:active::before { transform: scaleX(1); transition: transform 0.5s var(--ease); }
+.bid-btn:disabled::before { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .bid-btn[data-kbd-label]::after { content: attr(data-kbd-label); inset: 10px 12px auto auto; width: auto; height: auto; z-index: 2; transform: none; }
+}
+
+/* ---------- captain room: the live price rides on the sticky bid bar, so it can never be hidden ---------- */
+.bb-now { display: flex; align-items: center; gap: 10px; min-width: 0; margin: 0 0 8px; padding: 6px 12px; background: #0c0c0e; border: 1px solid var(--rule); }
+.bb-now .tiny { white-space: nowrap; }
+.bb-amt { font-family: var(--display); font-weight: 900; font-size: 26px; line-height: 1; white-space: nowrap; }
+.bb-lead { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 2px 8px 2px 4px; background: color-mix(in srgb, var(--tc) 22%, transparent); border-left: 3px solid var(--tc); font-weight: 700; font-size: 13px; }
+.bb-count { margin-left: auto; }
+
+/* compact lot stage in the captain room: photo, name and price sized for the narrow centre column */
+.cap-center .stage { grid-template-columns: minmax(110px, 200px) minmax(0, 1fr); gap: 18px; }
+.cap-center .stage-name { font-size: clamp(30px, 3.2vw, 58px) !important; }
+.cap-center .price { font-size: clamp(60px, 6vw, 112px); }
+.cap-center .meta-row > div { min-width: 0; flex: 0 1 auto; }
+.cap-center .meta-row b { overflow-wrap: anywhere; }
+.cap-center .price-block .label { white-space: nowrap; }
+.cap-center .price-block > .row { flex-wrap: wrap; gap: 4px 12px; }
+
+/* captain header: the position strip replaces the duplicate counters */
+.cap-progress .posnow { flex: 1 1 auto; margin: 0; min-width: 0; }
+.posnow.slim .pn-total { font-family: var(--mono); font-size: 11px; color: var(--dim); white-space: nowrap; }
+.posnow.slim .pn-total b { color: var(--bone); }
+.cap-head .posnow.slim .pn-k { font-size: 0; gap: 0; }
+.cap-head .posnow.slim .pn-head { padding: 6px 12px; }
+.cap-head .posnow.slim .pn-seg { padding: 6px 10px; gap: 6px; }
+.cap-head .posnow.slim .pn-name { font-size: 13px; }
+@media (max-width: 600px) { .bb-amt { font-size: 22px; } .bb-now { gap: 8px; padding: 5px 10px; } }
+
+/* captain header 1240–1599px: not enough room beside the team name — the position strip takes its own line */
+@media (min-width: 1240px) and (max-width: 1599px) {
+  .cap-wide .cap-head .cap-progress { grid-column: 1 / -1; order: 10; margin: 2px 0 0; }
+  .cap-wide .cap-head .cap-tools { grid-column: 3 / -1; justify-self: end; }
+}
+.posnow .pn-seg { overflow: hidden; }

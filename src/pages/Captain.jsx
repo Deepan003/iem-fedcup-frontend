@@ -19,7 +19,6 @@ import PlayerPool from '../components/PlayerPool.jsx';
 import { JoinMoment, JoinedStrip } from '../components/Presence.jsx';
 import { SaleMoments, UnsoldMoment } from '../components/Moments.jsx';
 import { PositionIntro, PositionNow } from '../components/Positions.jsx';
-import { AuctionProgress } from '../components/Live.jsx';
 
 /* --------------------------------- login --------------------------------- */
 function CaptainLogin({ onLogin }) {
@@ -330,8 +329,7 @@ function CaptainRoom({ auth, onLogout }) {
           )}
           {me?.penalty > 0 && <span className="pen-tag" style={{ display: 'block' }} title={(me.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>incl. −{money(me.penalty, state.currency)} penalty</span>}
         </div>
-      <PositionNow state={state} compact />
-      <div className="cap-progress"><span className="label">Still to come</span><AuctionProgress state={state} compact /></div>
+      <div className="cap-progress"><PositionNow state={state} slim total /></div>
       <div className="row cap-tools" style={{ justifyContent: 'space-between' }}>
         {connected ? <span className="tiny" style={{ color: 'var(--go)' }}>● Connected</span> : <span className="tiny" style={{ color: 'var(--amber)' }}>● Reconnecting</span>}
         <span className="row" style={{ gap: 8 }}>
@@ -358,6 +356,17 @@ function CaptainRoom({ auth, onLogout }) {
 
       <div className="bid-bar">
         {notice && <div className="bid-notice" role="status">{notice}</div>}
+        {lot && ['bidding', 'awaiting'].includes(lot.phase) && (() => {
+          const lt = teamById(state, lot.leaderId);
+          return (
+            <div className="bb-now">
+              <span className="tiny">{lot.amount != null ? 'Current bid' : 'Opening at'}</span>
+              <b className="bb-amt">{money(lot.amount ?? lot.base, state.currency)}</b>
+              {lt && <span className="bb-lead" style={{ '--tc': lt.color }}><TeamLogo team={lt} size={18} /><span className="ellipsis">{lt.id === me?.id ? 'You' : (lt.shortName || lt.name)}</span></span>}
+              <span className="tiny bb-count">{lot.bidCount} bid{lot.bidCount === 1 ? '' : 's'}</span>
+            </div>
+          );
+        })()}
         {leading ? (
           <div className="bid-btn holding" style={{ '--tc': me?.color }} role="status" aria-live="polite">
             <span className="hold-ring" aria-hidden="true" />
