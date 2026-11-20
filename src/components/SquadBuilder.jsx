@@ -4,6 +4,9 @@ import {
 import { assetUrl } from '../lib/api.js';
 import { initials, money, POS_SHORT } from '../lib/format.js';
 import { TeamLogo } from './ui.jsx';
+import {
+  lineupCanvas, lineupPdf, saveBlob, squadPdf, xlsxBlob,
+} from '../lib/squadExport.js';
 import '../squad.css';
 
 /* --------------------------------- formations --------------------------------- */
@@ -233,19 +236,26 @@ export default function SquadBuilder({
     return () => window.removeEventListener('keydown', esc);
   }, []);
 
-  const printPdf = () => {
-    document.body.classList.add('print-squad');
-    const done = () => { document.body.classList.remove('print-squad'); window.removeEventListener('afterprint', done); };
-    window.addEventListener('afterprint', done);
-    setTimeout(() => window.print(), 50);
+  // downloads: the lineup as an image (PNG) or the same image as a PDF page; the squad as a PDF sheet or Excel
+  const [dl, setDl] = useState('');
+  const fileBase = (team?.name || 'team').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+  const roleOf = (p) => (p.isCaptain ? 'Captain' : p.retained ? 'Retained' : 'Bought');
+  const priceOf = (p) => (p.isCaptain ? '' : money(p.price, currency));
+  const lineupImage = () => lineupCanvas({
+    team, formation: plan.formation, slots, lineup, byId, bench,
+  });
+  const lineupPng = async () => {
+    setDl('png');
+    try { const cv = await lineupImage(); cv.toBlob((b) => b && saveBlob(b, `${fileBase} - lineup ${plan.formation}.png`), 'image/png'); } finally { setDl(''); }
   };
-  // team list as a spreadsheet (opens in Excel / Google Sheets)
-  const downloadList = () => {
-    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = [['#', 'Name', 'Position', 'Role', 'Price'], ...squad.map((p, i) => [i + 1, p.name, p.position || '', p.isCaptain ? 'Captain' : p.retained ? 'Retained' : 'Bought', p.isCaptain ? '' : money(p.price, currency)])];
-    const blob = new Blob(['\ufeff' + rows.map((r) => r.map(esc).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${team?.name || 'team'} - squad list.csv`; a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  const lineupAsPdf = async () => {
+    setDl('pdf');
+    try { lineupPdf(await lineupImage(), `${fileBase} - lineup ${plan.formation}`); } finally { setDl(''); }
+  };
+  const squadAsPdf = () => squadPdf({ team, squad, role: roleOf, price: priceOf });
+  const squadAsXlsx = () => {
+    const rows = [['#', 'Name', 'Position', 'Role', 'Price'], ...squad.map((p, i) => [i + 1, p.name, p.position || '', roleOf(p), priceOf(p)])];
+    saveBlob(xlsxBlob(team?.name || 'Squad', rows, [5, 30, 14, 12, 12]), `${fileBase} - squad.xlsx`);
   };
   // every formation on one printable sheet (best XI for each), saved as PDF from the print dialog
   const [allF, setAllF] = useState(false);
@@ -280,10 +290,20 @@ export default function SquadBuilder({
           </label>
           <button type="button" className="btn sm" onClick={() => { commit(autoPick(slots, squad)); setSel(null); }} title="Best XI by position (fills gaps with anyone left)">✨ Auto pick</button>
           <button type="button" className="btn sm ghost" onClick={() => { commit({}); setSel(null); }}>Clear</button>
-          <button type="button" className="btn sm ghost" onClick={printPdf} title="This lineup as a PDF">⬇ Lineup PDF</button>
-          <button type="button" className="btn sm ghost" onClick={downloadList} title="Your squad as a spreadsheet">⬇ Team list</button>
-          <button type="button" className="btn sm ghost" onClick={printAll} title="Every formation with your best XI, as a PDF">⬇ All formations</button>
         </div>
+      </div>
+      <div className="sb3-dl no-print-sb" role="group" aria-label="Downloads">
+        <span className="sb3-dl-g"><span className="sb3-dl-k">Lineup</span>
+          <button type="button" className="btn sm" disabled={!!dl} onClick={lineupPng} title="This lineup as an image">{dl === 'png' ? 'Making…' : '⬇ PNG'}</button>
+          <button type="button" className="btn sm" disabled={!!dl} onClick={lineupAsPdf} title="This lineup as a PDF">{dl === 'pdf' ? 'Making…' : '⬇ PDF'}</button>
+        </span>
+        <span className="sb3-dl-g"><span className="sb3-dl-k">Squad</span>
+          <button type="button" className="btn sm" onClick={squadAsPdf} title="Your full squad with photos, as a PDF">⬇ PDF</button>
+          <button type="button" className="btn sm" onClick={squadAsXlsx} title="Your full squad as an Excel sheet">⬇ Excel</button>
+        </span>
+        <span className="sb3-dl-g"><span className="sb3-dl-k">Every formation</span>
+          <button type="button" className="btn sm" onClick={printAll} title="Every formation with your best XI, as a PDF">⬇ PDF</button>
+        </span>
       </div>
 
       <div className="sb3-body">

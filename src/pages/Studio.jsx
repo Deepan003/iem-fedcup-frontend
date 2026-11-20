@@ -11,9 +11,11 @@ import { BrandMark } from '../components/Nav.jsx';
 import TeamReveal from '../components/TeamReveal.jsx';
 import { SoundDock, useAuctionSound } from '../components/Sound.jsx';
 import Screensaver from '../components/Screensaver.jsx';
-import { AuctionProgress, PositionAnnounce, RankList } from '../components/Live.jsx';
+import { AuctionProgress, RankList } from '../components/Live.jsx';
 import PlayerPool from '../components/PlayerPool.jsx';
 import { JoinMoment } from '../components/Presence.jsx';
+import { SaleMoments, UnsoldMoment } from '../components/Moments.jsx';
+import { PositionIntro, PositionNow } from '../components/Positions.jsx';
 import { api } from '../lib/api.js';
 
 function Clock() {
@@ -59,6 +61,7 @@ export default function Studio() {
         <div className="auth-wrap"><Spinner /></div>
       ) : (
         <main className="container studio">
+          <PositionNow state={state} />
           <div className="studio-grid">
             <LotStage state={state} now={now} />
             <aside className="stack" style={{ gap: 28 }}>
@@ -131,7 +134,9 @@ export default function Studio() {
       <Screensaver state={state} presence={presence} />
       <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact={state?.status === 'live' && !state?.paused && ['bidding', 'awaiting'].includes(state?.lot?.phase)} />
       {poolOpen && state && <PlayerPool load={() => api('/pool')} teams={state.teams} currency={state.currency} version={`${state.dataV}-${state.stats?.sold}-${state.stats?.unsold}-${state.stats?.retained}`} onClose={() => setPoolOpen(false)} />}
-      {state && <PositionAnnounce state={state} />}
+      {state && <SaleMoments state={state} />}
+      {state && <UnsoldMoment state={state} />}
+      {state && <PositionIntro state={state} />}
       <SoldOverlay state={state} />
       <SoundDock state={state} sound={snd} surface="studio" big={screen} gate />
     </div>

@@ -58,7 +58,7 @@
 .pc-stamp { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-10deg); padding: 4px 12px; border: 2.5px solid var(--tc, #d8d8dc); border-radius: 3px; color: var(--tc, #d8d8dc); font-family: var(--display); font-weight: 900; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; background: rgba(0, 0, 0, 0.45); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
 
 /* unsold: put under the hammer, no bids — cut through */
-.pc-unsold .pc-photo img { filter: grayscale(0.85) brightness(0.62); }
+.pc-unsold .pc-photo img { filter: none; } /* unsold keeps its normal photo: only the cut + label mark it */
 .pc-unsold .pc-name { text-decoration: line-through; text-decoration-color: var(--danger, #ef4444); text-decoration-thickness: 2px; color: #b9b9be; }
 .pc-cut { position: absolute; z-index: 1; left: -10%; top: 50%; width: 120%; height: 4px; background: var(--danger, #ef4444); transform: rotate(-52deg); box-shadow: 0 0 10px rgba(239, 68, 68, 0.55); }
 .pc-stamp-un { border-color: var(--danger, #ef4444); color: #fff; background: var(--danger, #ef4444); font-size: 18px; top: auto; bottom: 10px; transform: translateX(-50%); }

@@ -17,6 +17,8 @@ import { ShortcutHelp, useShortcuts } from '../lib/shortcuts.jsx';
 import SquadBuilder from '../components/SquadBuilder.jsx';
 import PlayerPool from '../components/PlayerPool.jsx';
 import { JoinMoment, JoinedStrip } from '../components/Presence.jsx';
+import { SaleMoments, UnsoldMoment } from '../components/Moments.jsx';
+import { PositionIntro, PositionNow } from '../components/Positions.jsx';
 import { AuctionProgress } from '../components/Live.jsx';
 
 /* --------------------------------- login --------------------------------- */
@@ -306,6 +308,9 @@ function CaptainRoom({ auth, onLogout }) {
     <main className="container studio cap-wide" style={{ paddingBottom: 0, paddingTop: 80 }}>
       <ShortcutHelp open={keys.help} onClose={() => keys.setHelp(false)} />
       <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact />
+      {state && <SaleMoments state={state} compact />}
+      {state && <UnsoldMoment state={state} compact />}
+      {state && <PositionIntro state={state} compact />}
       {poolOpen && <PlayerPool load={() => api('/captain/pool', { token: auth.token })} teams={state.teams} currency={state.currency} version={`${state.dataV}-${state.stats?.sold}-${state.stats?.unsold}-${state.stats?.retained}`} onClose={() => setPoolOpen(false)} />}
       <div className="studio-bg" />
       <div className="cap-head" style={{ borderBottom: `2px solid ${me?.color || 'var(--rule)'}` }}>
@@ -325,6 +330,7 @@ function CaptainRoom({ auth, onLogout }) {
           )}
           {me?.penalty > 0 && <span className="pen-tag" style={{ display: 'block' }} title={(me.penalties || []).map((p) => `−${p.amount}: ${p.remark}`).join(' · ')}>incl. −{money(me.penalty, state.currency)} penalty</span>}
         </div>
+      <PositionNow state={state} compact />
       <div className="cap-progress"><span className="label">Still to come</span><AuctionProgress state={state} compact /></div>
       <div className="row cap-tools" style={{ justifyContent: 'space-between' }}>
         {connected ? <span className="tiny" style={{ color: 'var(--go)' }}>● Connected</span> : <span className="tiny" style={{ color: 'var(--amber)' }}>● Reconnecting</span>}

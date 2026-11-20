@@ -150,7 +150,7 @@ export default function Portal() {
                   </div>
                 </div>
                 <span className="row" style={{ gap: 8 }}>
-                  {config.cardsEnabled && <button type="button" className="btn sm card-btn" onClick={(e) => { e.stopPropagation(); setCardFor(p); }}>🃏 Card</button>}
+                  {config.cardsEnabled && <button type="button" className="btn sm card-btn" onClick={(e) => { e.stopPropagation(); setCardFor(p); }} title="Your player card: PNG or MP4 video"><span className="cb-ic" aria-hidden="true">▶</span>Get card</button>}
                   <span className={`stamp ${p.status}`}>{STATUS[p.status] || p.status}</span>
                 </span>
               </div>

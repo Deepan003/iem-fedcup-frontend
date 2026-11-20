@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  CARD_H, CARD_W, cardBlob, cardClip, drawCard, loadCardAssets,
+  CARD_H, CARD_W, cardBlob, drawCard, loadCardAssets,
 } from '../lib/cards.js';
+import { cardFilm } from '../lib/cardFilm.js';
 import { money } from '../lib/format.js';
 
 const save = (blob, name) => {
@@ -30,6 +31,7 @@ export default function CardStudio({ info, onClose }) {
   const canvasRef = useRef(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
+  const [prog, setProg] = useState(0);
   const file = (info.player.name || 'player').replace(/[^\w]+/g, '-').toLowerCase();
 
   useEffect(() => {
@@ -66,19 +68,21 @@ export default function CardStudio({ info, onClose }) {
       setBusy('');
     }
   };
-  const clip = async () => {
-    setBusy('clip');
+  const film = async (ratio) => {
+    setBusy(`film-${ratio}`);
     setErr('');
+    setProg(0);
     try {
-      const r = await cardClip(info, 3);
-      if (!r) throw new Error('Animated cards need Chrome, Edge or Safari 14.1+.');
-      save(r.blob, `${file}-fedcup-card.${r.ext}`);
+      const r = await cardFilm(info, { ratio, onProgress: setProg });
+      if (!r) throw new Error('Video cards need Chrome, Edge or Safari 14.1+.');
+      save(r.blob, `${file}-fedcup-card-${ratio === '1x1' ? 'square' : 'story'}.${r.ext}`);
     } catch (e) {
-      setErr(e.message);
+      setErr(e.message || 'Could not make the video.');
     } finally {
       setBusy('');
     }
   };
+  const recording = busy.startsWith('film');
 
   return (
     <div className="card-studio" role="dialog" aria-label={`${info.player.name} card`} onClick={onClose}>
@@ -87,11 +91,24 @@ export default function CardStudio({ info, onClose }) {
         <div className="cs-side">
           <span className="label">Player card</span>
           <h2 className="display">{info.player.name}</h2>
-          <p className="muted small">Download it and share it. The animated version is a 3-second clip with the foil shine.</p>
-          <div className="cs-btns">
-            <button type="button" className="btn primary" disabled={!!busy} onClick={() => still('image/png', 'png')}>{busy === 'png' ? 'Making…' : '⬇ PNG'}</button>
-            <button type="button" className="btn" disabled={!!busy} onClick={() => still('image/jpeg', 'jpg')}>{busy === 'jpg' ? 'Making…' : '⬇ JPG'}</button>
-            <button type="button" className="btn" disabled={!!busy} onClick={clip}>{busy === 'clip' ? 'Recording 3 s…' : '⬇ Animated'}</button>
+          <p className="muted small">Share it anywhere. The video is a 7-second reveal with music, made for Instagram stories and posts.</p>
+          <div className="cs-dl">
+            <span className="cs-dl-k">Image</span>
+            <div className="cs-btns">
+              <button type="button" className="btn primary" disabled={!!busy} onClick={() => still('image/png', 'png')}>{busy === 'png' ? 'Making…' : '⬇ PNG'}</button>
+              <button type="button" className="btn" disabled={!!busy} onClick={() => still('image/jpeg', 'jpg')}>{busy === 'jpg' ? 'Making…' : '⬇ JPG'}</button>
+            </div>
+            <span className="cs-dl-k">Video · with music</span>
+            <div className="cs-btns">
+              <button type="button" className="btn primary" disabled={!!busy} onClick={() => film('9x16')}>▶ MP4 · Story 9:16</button>
+              <button type="button" className="btn" disabled={!!busy} onClick={() => film('1x1')}>▶ MP4 · Post 1:1</button>
+            </div>
+            {recording && (
+              <div className="cs-prog" role="progressbar" aria-valuenow={Math.round(prog * 100)} aria-valuemin={0} aria-valuemax={100}>
+                <i style={{ width: `${Math.round(prog * 100)}%` }} />
+                <span>Recording your video… {Math.round(prog * 100)}% · keep this tab open</span>
+              </div>
+            )}
           </div>
           {err && <p className="small" style={{ color: 'var(--signal)' }}>{err}</p>}
           <button type="button" className="btn ghost sm" onClick={onClose}>✕ Close</button>

@@ -1,0 +1,70 @@
+/* ---------- sale moments: record / position records / unsold, on every screen (imported by components/Moments.jsx) ---------- */
+.moment { position: fixed; z-index: 145; display: grid; align-items: center; pointer-events: none; overflow: hidden; color: #fff; }
+.moment.big { left: 50%; top: 50%; width: min(1100px, 94vw); transform: translate(-50%, -50%); grid-template-columns: auto minmax(0, 1fr) auto; gap: 32px; padding: 34px 44px; background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 26%, #0b0b0d) 0%, #0b0b0d 62%); border: 1px solid color-mix(in srgb, var(--ac) 60%, transparent); box-shadow: 0 50px 140px -30px #000, 0 0 80px -20px color-mix(in srgb, var(--ac) 55%, transparent); animation: m-in 6.8s cubic-bezier(.2, .9, .2, 1) both; }
+.moment.card { right: 18px; bottom: 18px; width: min(420px, calc(100vw - 36px)); grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; padding: 12px 16px; background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 22%, #0d0d10), #0d0d10 70%); border-left: 4px solid var(--ac); box-shadow: 0 24px 60px -20px #000; animation: m-in-c 5.2s cubic-bezier(.2, .9, .2, 1) both; }
+.moment.card.m-pos1, .moment.card.m-record { animation-duration: 6.8s; }
+.m-sweep { position: absolute; inset: 0; background: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--ac) 45%, #fff) 50%, transparent 65%); opacity: .35; transform: translateX(-120%); animation: m-sweep 1.3s .35s ease-out both; }
+.m-rays { position: absolute; left: 110px; top: 50%; width: 560px; height: 560px; margin: -280px 0 0 -280px; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ac) 30%, transparent) 0deg 6deg, transparent 6deg 18deg); -webkit-mask: radial-gradient(circle, #000 0 30%, transparent 62%); mask: radial-gradient(circle, #000 0 30%, transparent 62%); opacity: .5; animation: m-spin 14s linear infinite; }
+.m-face { position: relative; width: 132px; height: 132px; border-radius: 50%; overflow: hidden; background: #1a1a1d; box-shadow: 0 0 0 3px var(--ac), 0 0 40px color-mix(in srgb, var(--ac) 60%, transparent); display: grid; place-items: center; animation: m-pop .7s .15s cubic-bezier(.2, 1.6, .4, 1) both; }
+.moment.card .m-face { width: 52px; height: 52px; box-shadow: 0 0 0 2px var(--ac); }
+.m-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; }
+.m-face span { font-family: var(--display); font-weight: 900; font-size: 44px; color: rgba(255, 255, 255, .7); }
+.moment.card .m-face span { font-size: 18px; }
+.m-body { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.m-kicker { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-weight: 800; font-size: 16px; letter-spacing: .2em; text-transform: uppercase; color: var(--ac); animation: m-up .5s .25s both; }
+.moment.card .m-kicker { font-size: 10.5px; letter-spacing: .12em; }
+.m-crown { font-style: normal; animation: m-twinkle 1.6s ease-in-out infinite; }
+.m-name { font-family: var(--display); font-weight: 900; font-size: clamp(40px, 5.4vw, 84px); line-height: .92; text-transform: uppercase; overflow-wrap: anywhere; animation: m-up .6s .35s both; }
+.moment.card .m-name { font-size: 22px; }
+.m-meta { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 18px; font-weight: 600; color: var(--bone, #efebe3); animation: m-up .6s .5s both; }
+.moment.card .m-meta { font-size: 12px; gap: 6px; }
+.m-beat { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--dim, #9a958c); animation: m-up .6s .7s both; }
+.moment.card .m-beat { font-size: 10px; }
+.m-price { position: relative; font-family: var(--display); font-weight: 900; font-size: clamp(54px, 7vw, 110px); line-height: .9; color: var(--ac); text-shadow: 0 0 40px color-mix(in srgb, var(--ac) 50%, transparent); white-space: nowrap; animation: m-price .8s .55s cubic-bezier(.2, 1.4, .3, 1) both; }
+.moment.card .m-price { font-size: 26px; }
+@keyframes m-in { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.9); } 7% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 90% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -46%) scale(.98); } }
+@keyframes m-in-c { 0% { opacity: 0; transform: translateX(40px); } 8% { opacity: 1; transform: none; } 90% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(24px); } }
+@keyframes m-sweep { to { transform: translateX(120%); } }
+@keyframes m-spin { to { transform: rotate(360deg); } }
+@keyframes m-pop { from { transform: scale(.4); opacity: 0; } }
+@keyframes m-up { from { transform: translateY(16px); opacity: 0; } }
+@keyframes m-price { from { transform: scale(1.5); opacity: 0; filter: blur(6px); } }
+@keyframes m-twinkle { 50% { transform: scale(1.25) rotate(12deg); opacity: .7; } }
+
+/* unsold: the card slides in, a red cut slashes through, UNSOLD lands */
+.unsold-moment { position: fixed; z-index: 145; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 26px; pointer-events: none; color: #fff; overflow: hidden; }
+.unsold-moment.big { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(820px, 92vw); padding: 28px 36px; background: linear-gradient(105deg, color-mix(in srgb, #ef4444 20%, #0b0b0d), #0b0b0d 65%); border: 1px solid rgba(239, 68, 68, .45); box-shadow: 0 40px 120px -30px #000; animation: um-in 3.2s cubic-bezier(.2, .9, .2, 1) both; }
+.unsold-moment.card { right: 18px; bottom: 18px; width: min(360px, calc(100vw - 36px)); gap: 12px; padding: 12px 14px; background: linear-gradient(105deg, color-mix(in srgb, #ef4444 20%, #0d0d10), #0d0d10 70%); border-left: 4px solid #ef4444; box-shadow: 0 24px 60px -20px #000; animation: um-in-c 2.6s cubic-bezier(.2, .9, .2, 1) both; }
+.um-card { position: relative; width: 120px; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 6px; background: #1a1a1d; display: grid; place-items: center; animation: um-slide .55s .05s cubic-bezier(.2, .9, .2, 1) both; }
+.unsold-moment.card .um-card { width: 46px; }
+.um-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; animation: um-fade .8s .7s both; }
+.um-ini { font-family: var(--display); font-weight: 900; font-size: 40px; color: rgba(255, 255, 255, .6); }
+.unsold-moment.card .um-ini { font-size: 16px; }
+.um-cut { position: absolute; left: -15%; top: 50%; width: 130%; height: 5px; background: #ef4444; box-shadow: 0 0 16px rgba(239, 68, 68, .8); transform: rotate(-52deg) scaleX(0); transform-origin: 50% 50%; animation: um-cut .35s .45s cubic-bezier(.7, 0, .3, 1) forwards; }
+.um-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.um-stamp { align-self: flex-start; padding: 4px 14px; border: 3px solid #ef4444; color: #ef4444; font-family: var(--display); font-weight: 900; font-size: clamp(34px, 5vw, 64px); line-height: 1; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-6deg); animation: um-stamp .5s .6s cubic-bezier(.2, 1.4, .3, 1) both; }
+.unsold-moment.card .um-stamp { font-size: 18px; padding: 2px 8px; border-width: 2px; }
+.um-name { font-family: var(--display); font-weight: 900; font-size: clamp(26px, 3.4vw, 44px); line-height: .95; text-transform: uppercase; overflow-wrap: anywhere; animation: m-up .5s .35s both; }
+.unsold-moment.card .um-name { font-size: 16px; }
+.um-note { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim, #9a958c); }
+.unsold-moment.card .um-note { font-size: 9.5px; }
+@keyframes um-in { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.94); } 9% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 88% { opacity: 1; transform: translate(-50%, -50%); } 100% { opacity: 0; transform: translate(-50%, -50%) translateY(30px); } }
+@keyframes um-in-c { 0% { opacity: 0; transform: translateX(30px); } 10% { opacity: 1; transform: none; } 88% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes um-slide { from { transform: translateX(-30px) rotate(-6deg); opacity: 0; } }
+@keyframes um-fade { to { filter: grayscale(.85) brightness(.6); } }
+@keyframes um-cut { to { transform: rotate(-52deg) scaleX(1); } }
+@keyframes um-stamp { from { transform: rotate(-6deg) scale(2.2); opacity: 0; } }
+
+@media (max-width: 760px) {
+  .moment.big { grid-template-columns: auto minmax(0, 1fr); gap: 16px; padding: 22px; }
+  .moment.big .m-price { grid-column: 1 / -1; font-size: 52px; }
+  .moment.big .m-face { width: 76px; height: 76px; }
+  .moment.big .m-rays { display: none; }
+  .unsold-moment.big { gap: 16px; padding: 20px; }
+  .unsold-moment.big .um-card { width: 80px; }
+}
+@media (prefers-reduced-motion: reduce) { .moment, .moment *, .unsold-moment, .unsold-moment * { animation-duration: .01s !important; animation-iteration-count: 1 !important; } }
+
+/* big moments: dim + soften the page behind so the moment reads cleanly */
+.moment.big, .unsold-moment.big { box-shadow: 0 0 0 100vmax rgba(4, 4, 6, .55), 0 50px 140px -30px #000; }
+.moment.big { box-shadow: 0 0 0 100vmax rgba(4, 4, 6, .55), 0 50px 140px -30px #000, 0 0 80px -20px color-mix(in srgb, var(--ac) 55%, transparent); }

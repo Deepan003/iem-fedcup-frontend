@@ -1,3 +1,6 @@
+import { SaleMoments, UnsoldMoment } from '../../components/Moments.jsx';
+import { PositionIntro } from '../../components/Positions.jsx';
+import { AssignPanel, PlayerSlider } from '../../components/ControlExtras.jsx';
 import { JoinMoment, JoinedStrip } from '../../components/Presence.jsx';
 import { useEffect, useState } from 'react';
 import { explain } from '../../lib/api.js';
@@ -179,6 +182,7 @@ export default function Control() {
     setBusy(false);
     if (!res?.ok) toast(explain(res?.code), 'error', 5000);
     else if (ok) toast(ok, 'ok');
+    return !!res?.ok;
   };
 
   const leader = teamById(state, lot?.leaderId);
@@ -214,6 +218,9 @@ export default function Control() {
         <ScreensaverControl />
         <SoundCheckButton />
         <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact />
+        {state && <SaleMoments state={state} compact />}
+        {state && <UnsoldMoment state={state} compact />}
+        {state && <PositionIntro state={state} compact />}
       </div>
 
       <div className="card ctl-global" style={{ marginBottom: 14 }}>
@@ -229,6 +236,8 @@ export default function Control() {
           {live && <button type="button" className="btn danger" disabled={busy || open} onClick={() => act('end', {}, { confirm: { title: 'End the auction?', message: 'Bidding stops. You can still undo sales and export the results afterwards.', tone: 'danger', confirmLabel: 'End auction' } })}>■ End auction</button>}
         </div>
       </div>
+
+      <PlayerSlider state={state} busy={busy} canLoad={live && !open} onLoad={(id) => act('loadLot', { playerId: id })} />
 
       <div className="cols-2">
         <div className="stack">
@@ -314,6 +323,7 @@ export default function Control() {
               </div>
             )}
           </div>
+          {(state.status === 'ended' || (live && !open)) && <AssignPanel state={state} busy={busy} act={act} />}
         </div>
 
         <div className="stack">
