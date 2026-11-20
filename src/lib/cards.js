@@ -2,7 +2,7 @@
  * Player card renderer: draws a 1080×1350 collectible card on a canvas (no libraries), so it can be
  * downloaded as PNG / JPG, or recorded as a short animated clip (foil sweep).
  */
-import { assetUrl } from './api.js';
+import { API_URL, assetUrl } from './api.js';
 
 export const CARD_W = 1080;
 export const CARD_H = 1350;
@@ -11,11 +11,8 @@ const MONO = '"JetBrains Mono", "IBM Plex Mono", Consolas, monospace';
 
 const imgCache = new Map();
 /** Load an image for canvas use (CORS-clean). Resolves null instead of failing. */
-export function loadImage(url) {
-  if (!url) return Promise.resolve(null);
-  const src = assetUrl(url);
-  if (imgCache.has(src)) return imgCache.get(src);
-  const p = new Promise((resolve) => {
+function loadOne(src) {
+  return new Promise((resolve) => {
     const im = new Image();
     im.crossOrigin = 'anonymous';
     im.decoding = 'async';
@@ -23,6 +20,27 @@ export function loadImage(url) {
     im.onerror = () => resolve(null);
     im.src = src;
   });
+}
+
+/**
+ * Photos and logos on R2 come from another site that sends no CORS header, so a canvas can't use
+ * them directly. Load those through the backend (same image, CORS allowed, cached in memory).
+ */
+function proxied(src) {
+  try {
+    const u = new URL(src, window.location.href);
+    const api = new URL(API_URL);
+    if (u.origin === window.location.origin || u.origin === api.origin) return null;
+    return `${API_URL}/api/media/${u.pathname.replace(/^\/+/, '')}`;
+  } catch { return null; }
+}
+
+export function loadImage(url) {
+  if (!url) return Promise.resolve(null);
+  const src = assetUrl(url);
+  if (imgCache.has(src)) return imgCache.get(src);
+  const via = proxied(src);
+  const p = (via ? loadOne(via) : Promise.resolve(null)).then((im) => im || loadOne(src));
   imgCache.set(src, p);
   return p;
 }
@@ -182,11 +200,18 @@ export function drawCard(ctx, info, assets, t = null) {
   ctx.restore();
 
   // header: crest + event, position + tier
-  if (assets.crest) ctx.drawImage(assets.crest, 70, 40, 78, 78);
+  // crest keeps its own shape (it is wider than tall) and the title starts after it, never on top of it
+  let titleX = 70;
+  if (assets.crest) {
+    const ch = 78;
+    const cw = Math.round((ch * (assets.crest.naturalWidth || 1)) / (assets.crest.naturalHeight || 1));
+    ctx.drawImage(assets.crest, 70, 40, cw, ch);
+    titleX = 70 + cw + 18;
+  }
   ctx.fillStyle = '#fff';
   ctx.font = `700 26px ${MONO}`;
   ctx.textAlign = 'left';
-  ctx.fillText((info.title || 'IEM FED CUP · SEASON 5').toUpperCase(), 164, 92);
+  ctx.fillText((info.title || 'IEM FED CUP · SEASON 5').toUpperCase(), titleX, 92);
   ctx.textAlign = 'right';
   ctx.font = `900 92px ${DISPLAY}`;
   ctx.fillStyle = rgba(gold, 1);
