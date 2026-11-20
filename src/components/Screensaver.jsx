@@ -156,7 +156,7 @@ function RetainedSlide({ team, players, cur }) {
               <div className="ss-rinfo">
                 <b>{p.name}</b>
                 {[p.department, p.year].some(Boolean) && <span className="ss-meta">{[p.department, p.year].filter(Boolean).join(' · ')}</span>}
-                <span className="ss-price">{p.isCaptain && !p.price ? 'Free' : <CountUp value={p.price} cur={cur} delay={600 + i * 160} />}</span>
+                {!(p.isCaptain && !p.price) && <span className="ss-price"><CountUp value={p.price} cur={cur} delay={600 + i * 160} /></span>}
               </div>
             </div>
           );
