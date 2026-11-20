@@ -202,3 +202,7 @@ tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 .rp-face { max-width: none; flex-shrink: 0; box-sizing: border-box; display: inline-grid; place-items: center; border-radius: 50%; object-fit: cover; object-position: 50% 20%; background: #eee; border: 1px solid #ddd; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .rp-ini { font-weight: 800; font-size: 11px; color: #555; }
 .rp-table tr { break-inside: avoid; }
+.chip.ctl-presence { padding: 3px 10px; }
+.ctl-presence .js-team .team-logo { width: 22px !important; height: 22px !important; }
+.ctl-presence .js-row { gap: 3px; }
+.chip.ctl-warn { background: rgba(245, 158, 11, 0.16); border-color: #f59e0b; color: #fcd34d; font-weight: 700; }

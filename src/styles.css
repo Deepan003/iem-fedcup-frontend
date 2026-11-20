@@ -971,3 +971,6 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 5px; border: 1px sol
 /* purse standings: team names wrap instead of being cut with "…" */
 .purse .ellipsis { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 .purse b { min-width: 0; }
+
+/* position badge over a photo (DEF / MID / FWD / GK): a dark chip with a coloured edge, readable on any photo */
+.pcard .pos-badge { display: inline-block; padding: 5px 10px 4px; border-radius: 3px; background: rgba(8, 8, 10, 0.82); box-shadow: inset 4px 0 0 currentColor, 0 4px 14px rgba(0, 0, 0, 0.45); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }

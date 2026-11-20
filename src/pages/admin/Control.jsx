@@ -1,3 +1,4 @@
+import { JoinMoment, JoinedStrip } from '../../components/Presence.jsx';
 import { useEffect, useState } from 'react';
 import { explain } from '../../lib/api.js';
 import { money, teamById, POS_SHORT } from '../../lib/format.js';
@@ -152,7 +153,7 @@ function UpNextControl() {
 export default function Control() {
   const { auction } = useAdmin();
   const {
-    state, connected, viewers, now, emit,
+    state, connected, viewers, now, emit, presence, joinEvent,
   } = auction;
   const snd = useAuctionSound(state, now, { surface: 'admin' }); // off by default: the auctioneer can monitor
   const toast = useToast();
@@ -205,9 +206,14 @@ export default function Control() {
         <span className="chip">{state.stats.sold} sold · {state.stats.unsold} unsold</span>
         <AuctionProgress state={state} compact />
         {viewers && <span className="chip">👁 {viewers.public} viewers · {viewers.captains} captains</span>}
+        <span className="chip ctl-presence"><JoinedStrip state={state} presence={presence} label="Teams online" /></span>
+        {lot?.player && !lot.player.tier && ['reveal', 'bidding'].includes(lot.phase) && (
+          <span className="chip ctl-warn" title="This player has no tier, so he opens at the default base price from Rules & views. Set his tier on the Players page.">⚠ {lot.player.name}: no tier → opens at default base {money(lot.base ?? lot.player.basePrice, state.currency)}</span>
+        )}
         <UpNextControl />
         <ScreensaverControl />
         <SoundCheckButton />
+        <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact />
       </div>
 
       <div className="card ctl-global" style={{ marginBottom: 14 }}>
