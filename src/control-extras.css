@@ -50,3 +50,14 @@
 .pslider .ps-nm { font-size: 11px; line-height: 1.15; min-height: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .pslider .ps-meta { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 900px) { .pslider .ps-head { flex-wrap: wrap; } .ps-hide { margin-left: 0; } }
+
+/* searchable player picker (Assign unsold players) */
+.psearch { position: relative; }
+.psearch .input { width: 100%; }
+.psearch-list { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px); max-height: 300px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; background: #121215; border: 1px solid var(--rule-2, rgba(255, 255, 255, .16)); border-radius: 6px; box-shadow: 0 18px 40px -16px #000; }
+.psearch-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 4px; cursor: pointer; }
+.psearch-list li.on { background: color-mix(in srgb, var(--c) 20%, #1b1b20); }
+.psr-pos { font-family: var(--mono); font-size: 10.5px; font-weight: 800; text-align: center; padding: 2px 0; border-radius: 3px; color: #111; background: var(--c); }
+.psr-name { font-weight: 700; color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psr-tier { font-family: var(--mono); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+.psearch-list .psr-none { display: block; color: var(--dim); cursor: default; }

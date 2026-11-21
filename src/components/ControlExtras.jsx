@@ -114,6 +114,62 @@ export function PlayerSlider({ state, busy, canLoad, onLoad }) {
   );
 }
 
+/** Type-to-search player picker (filters as you type; arrows + Enter or click to pick). */
+function PlayerSearch({ players, value, onPick }) {
+  const cur = players.find((x) => x.id === value);
+  const [q, setQ] = useState(cur ? cur.name : '');
+  const [open, setOpen] = useState(false);
+  const [hi, setHi] = useState(0);
+  const list = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    const l = !t || (cur && q === cur.name) ? players : players.filter((x) => x.name.toLowerCase().includes(t));
+    return l.slice(0, 60);
+  }, [q, players, cur]);
+  const pick = (x) => { onPick(x.id); setQ(x.name); setOpen(false); };
+  const keys = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setHi((h) => Math.min(h + 1, list.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
+    else if (e.key === 'Enter' && open && list[hi]) { e.preventDefault(); pick(list[hi]); }
+    else if (e.key === 'Escape') setOpen(false);
+  };
+  return (
+    <div className="psearch">
+      <input
+        className="input"
+        value={q}
+        placeholder="Type a name…"
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+        aria-label="Search player"
+        onFocus={(e) => { setOpen(true); e.target.select(); }}
+        onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); if (value) onPick(''); }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={keys}
+      />
+      {open && (
+        <ul className="psearch-list" role="listbox">
+          {list.length ? list.map((x, i) => (
+            <li
+              key={x.id}
+              role="option"
+              aria-selected={i === hi}
+              className={i === hi ? 'on' : ''}
+              onMouseDown={(e) => { e.preventDefault(); pick(x); }}
+              onMouseEnter={() => setHi(i)}
+              style={{ '--c': POS_META[x.position]?.color || '#9ca3af' }}
+            >
+              <span className="psr-pos">{POS_META[x.position]?.short || '—'}</span>
+              <span className="psr-name">{x.name}</span>
+              <span className="psr-tier">{x.status === 'unsold' ? 'Unsold' : 'Not auctioned'}{x.tier ? ` · ${x.tier}` : ''}</span>
+            </li>
+          )) : <li className="psr-none">No player matches “{q}”</li>}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /**
  * After the auction (or between lots): hand an unsold player straight to a team. The server applies every
  * buying rule (purse, squad size, GK rule, position limits, base price).
@@ -126,7 +182,8 @@ export function AssignPanel({ state, busy, act }) {
   }, [state?.unsold, state?.upcoming, state?.status]);
   const [playerId, setPlayerId] = useState('');
   const [teamId, setTeamId] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(0);
+  const [pickKey, setPickKey] = useState(0); // remounts the search box (clears it) after each assignment
   const p = players.find((x) => x.id === playerId);
   useEffect(() => { if (p) setAmount(0); }, [playerId]); // eslint-disable-line react-hooks/exhaustive-deps -- unsold players are free by default
   useEffect(() => { if (playerId && !p) setPlayerId(''); }, [p, playerId]);
@@ -138,19 +195,16 @@ export function AssignPanel({ state, busy, act }) {
       confirm: { title: 'Assign this player?', message: `${p.name} → ${team.name} ${Number(amount) === 0 ? 'for FREE (nothing deducted from the purse)' : `for ${money(amount, state.currency)}`}.`, confirmLabel: 'Assign' },
       ok: `${p.name} → ${team.name}`,
     });
-    if (done) setPlayerId('');
+    if (done) { setPlayerId(''); setAmount(0); setPickKey((k) => k + 1); }
   };
   return (
     <section className="card assign-panel">
       <h2 style={{ marginTop: 0 }}>Assign unsold players</h2>
       <p className="muted small" style={{ marginTop: -4 }}>For the unsold auction in the room: give a player to a team. Unsold players are <b>free</b> (price 0, nothing deducted); type a price to charge one. Squad size and the goalkeeper rule still apply. Works after the auction has ended too.</p>
       <div className="assign-grid">
-        <label className="field"><span className="label">Player</span>
-          <select className="input" value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
-            <option value="">Choose player…</option>
-            {sorted.map((x) => <option key={x.id} value={x.id}>{POS_META[x.position]?.short || '—'} · {x.name}{x.basePrice != null ? ` (base ${money(x.basePrice, state.currency)})` : ''}</option>)}
-          </select>
-        </label>
+        <div className="field"><span className="label">Player · type to search ({players.length})</span>
+          <PlayerSearch key={pickKey} players={sorted} value={playerId} onPick={setPlayerId} />
+        </div>
         <label className="field"><span className="label">Team</span>
           <select className="input" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
             <option value="">Choose team…</option>
