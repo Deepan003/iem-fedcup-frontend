@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react';
 // (R2, the API domain), but never plain http, plugins, or a hijacked <base>.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'sha256-HBJ9QvaT+snu4uoTyQOoWuwX3fcgUNVZ06U4ALV5ZRg='",
+  "script-src 'self' 'sha256-HBJ9QvaT+snu4uoTyQOoWuwX3fcgUNVZ06U4ALV5ZRg=' https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
