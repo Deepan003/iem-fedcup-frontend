@@ -128,14 +128,14 @@ export function AssignPanel({ state, busy, act }) {
   const [teamId, setTeamId] = useState('');
   const [amount, setAmount] = useState('');
   const p = players.find((x) => x.id === playerId);
-  useEffect(() => { if (p) setAmount(p.basePrice ?? ''); }, [playerId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (p) setAmount(0); }, [playerId]); // eslint-disable-line react-hooks/exhaustive-deps -- unsold players are free by default
   useEffect(() => { if (playerId && !p) setPlayerId(''); }, [p, playerId]);
   if (!players.length) return null;
   const team = state.teams.find((t) => t.id === teamId);
   const sorted = [...players].sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || a.name.localeCompare(b.name));
   const assign = async () => {
     const done = await act('assignPlayer', { playerId, teamId, amount: Number(amount) }, {
-      confirm: { title: 'Assign this player?', message: `${p.name} → ${team.name} for ${money(amount, state.currency)}.`, confirmLabel: 'Assign' },
+      confirm: { title: 'Assign this player?', message: `${p.name} → ${team.name} ${Number(amount) === 0 ? 'for FREE (nothing deducted from the purse)' : `for ${money(amount, state.currency)}`}.`, confirmLabel: 'Assign' },
       ok: `${p.name} → ${team.name}`,
     });
     if (done) setPlayerId('');
@@ -143,7 +143,7 @@ export function AssignPanel({ state, busy, act }) {
   return (
     <section className="card assign-panel">
       <h2 style={{ marginTop: 0 }}>Assign unsold players</h2>
-      <p className="muted small" style={{ marginTop: -4 }}>For the unsold auction in the room: give a player to a team at the agreed price. All the rules still apply (purse, squad size, goalkeeper rule, base price). Works after the auction has ended too.</p>
+      <p className="muted small" style={{ marginTop: -4 }}>For the unsold auction in the room: give a player to a team. Unsold players are <b>free</b> (price 0, nothing deducted); type a price to charge one. Squad size and the goalkeeper rule still apply. Works after the auction has ended too.</p>
       <div className="assign-grid">
         <label className="field"><span className="label">Player</span>
           <select className="input" value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
@@ -157,10 +157,10 @@ export function AssignPanel({ state, busy, act }) {
             {state.teams.map((t) => <option key={t.id} value={t.id}>{t.name} · {t.count} players · max {money(t.maxBid, state.currency)}</option>)}
           </select>
         </label>
-        <label className="field"><span className="label">Price</span><MoneyInput value={amount} onChange={setAmount} /></label>
+        <label className="field"><span className="label">Price · 0 = free</span><MoneyInput value={amount} onChange={setAmount} /></label>
       </div>
       <div className="row wrap" style={{ marginTop: 10, gap: 10, alignItems: 'center' }}>
-        <button type="button" className="btn ok" disabled={busy || !p || !team || !amount} onClick={assign}>✓ Assign to team</button>
+        <button type="button" className="btn ok" disabled={busy || !p || !team || amount === '' || amount == null || Number(amount) < 0} onClick={assign}>{Number(amount) === 0 ? '✓ Assign FREE to team' : '✓ Assign to team'}</button>
         {team && p && Number(amount) > team.maxBid && <span className="small" style={{ color: 'var(--amber)' }}>Above the {team.name} max ({money(team.maxBid, state.currency)}): the server will refuse it.</span>}
       </div>
     </section>
