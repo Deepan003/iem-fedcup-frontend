@@ -191,139 +191,167 @@ export default function Control() {
   const live = state.status === 'live';
   const queue = state.upcoming || [];
 
+  const ended = state.status === 'ended';
+  const phaseLabel = !live ? (ended ? 'Auction ended' : 'Auction not started')
+    : state.paused ? 'Paused'
+      : !open ? 'Between players: load the next one'
+        : phase === 'reveal' ? 'On the block: bidding not open yet'
+          : phase === 'bidding' ? 'Bidding is open'
+            : 'Bidding closed: confirm the result';
+  const phaseTone = !live ? 'idle' : state.paused ? 'paused' : !open ? 'idle' : phase;
+  const confirmUndoBid = { title: 'Undo the last bid?', message: 'The latest bid is removed and the previous bidder leads again.', tone: 'warning', confirmLabel: 'Undo bid' };
+  const confirmReset = { title: 'Reset ALL bids on this player?', message: 'Every bid is wiped: the player goes back to his base price with no leader and bidding restarts with a fresh timer.', tone: 'danger', confirmLabel: 'Reset all bids' };
+
   return (
-    <>
+    <div className="ctl2">
       <ShortcutHelp
         open={keys.help}
         onClose={() => keys.setHelp(false)}
         all={[['N', 'Next player'], ['O', 'Open bidding'], ['C', 'Close bidding'], ['T', '+10 seconds'], ['R', 'Reopen bidding'], ['P', 'Pause / resume'], ['S', 'Confirm SOLD'], ['U', 'Mark unsold'], ['Z', 'Undo last bid'], ['X', 'Reset all bids']]}
       />
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+      <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact />
+      <SaleMoments state={state} compact />
+      <UnsoldMoment state={state} compact />
+      <PositionIntro state={state} compact />
+
+      {/* 1 · header: title + one status line */}
+      <header className="ctl-head">
         <h1 className="ctl-h1">Control room</h1>
+        <div className="ctl-status">
+          <span className={`chip st-conn ${connected ? 'ok' : 'bad'}`}><span className="dot" />{connected ? 'Connected' : 'Disconnected'}</span>
+          <span className={`chip st-${phaseTone}`}><b>{ended ? 'Ended' : !live ? 'Idle' : state.paused ? 'Paused' : 'Live'}</b></span>
+          <span className="chip">{state.mode === 'online' ? 'Online bidding' : 'Manual (room)'}</span>
+          <span className="chip">Round {state.round}</span>
+          <span className="chip"><b>{state.stats.sold}</b>&nbsp;sold · <b>{state.stats.unsold}</b>&nbsp;unsold</span>
+          {viewers && <span className="chip">👁 {viewers.public} viewers · {viewers.captains} captains</span>}
+        </div>
         <button type="button" className="btn sm ghost kbd-hint-btn" onClick={() => keys.setHelp(true)}>⌨ Shortcuts <kbd>?</kbd></button>
-      </div>
-      <div className="status-bar">
-        <span className="chip" style={{ color: connected ? '#86efac' : '#fca5a5' }}><span className="dot" />{connected ? 'Connected' : 'Disconnected'}</span>
-        <span className="chip">Status: <b>{state.status}</b>{state.paused ? ' (paused)' : ''}</span>
-        <span className="chip">Mode: <b>{state.mode}</b></span>
-        <span className="chip">Round {state.round}</span>
-        <span className="chip">{state.stats.sold} sold · {state.stats.unsold} unsold</span>
+      </header>
+
+      {/* 2 · command dock: always in the same place, pinned while scrolling */}
+      <section className={`ctl-dock tone-${phaseTone}`} aria-label="Auction controls">
+        <div className="dock-lot">
+          <div className="dock-k">
+            <span className="dock-dot" aria-hidden="true" />
+            <span className="dock-phase">{phaseLabel}</span>
+            {lot?.player && open && <b className="dock-who">· {lot.player.name} · Lot {String(lot.seq).padStart(3, '0')}</b>}
+          </div>
+          <div className="dock-btns">
+            {!live && !ended && <button type="button" className="btn ok dock-main" disabled={busy} onClick={() => act('start', {}, { ok: 'Auction is live' })}>▶ Start auction</button>}
+            {live && !open && (
+              <>
+                <button type="button" data-kbd="n" data-kbd-label="N" data-kbd-name="Next player" className="btn primary dock-main" disabled={busy || !queue.length} onClick={() => act('loadLot')}>
+                  Next player{queue[0] ? `: ${queue[0].name}` : ''}
+                </button>
+                <span className="dock-pick">
+                  <select className="input" value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Pick a player">
+                    <option value="">…or pick a player</option>
+                    {queue.map((p) => <option key={p.id} value={p.id}>{POS_SHORT[p.position]} · {p.name}</option>)}
+                    {(state.unsold || []).map((p) => <option key={p.id} value={p.id}>UNSOLD · {p.name}</option>)}
+                  </select>
+                  <button type="button" className="btn" disabled={busy || !pick} onClick={() => { act('loadLot', { playerId: pick }); setPick(''); }}>Load</button>
+                </span>
+              </>
+            )}
+            {live && phase === 'reveal' && (
+              <>
+                <button type="button" data-kbd="o" data-kbd-label="O" data-kbd-name="Open bidding" className="btn primary dock-main" disabled={busy || state.paused} onClick={() => act('openBidding')}>🔨 Open bidding</button>
+                <button type="button" data-kbd="shift+u" data-kbd-label="U" data-kbd-name="Mark unsold" className="btn" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: { title: 'Mark unsold?', message: 'This player is marked unsold without any bidding.', tone: 'warning', confirmLabel: 'Mark unsold' } })}>✕ Mark unsold</button>
+                <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot')}>Withdraw (back to queue)</button>
+              </>
+            )}
+            {live && phase === 'bidding' && (
+              <>
+                <button type="button" data-kbd="c" data-kbd-label="C" data-kbd-name="Close bidding" className="btn gold dock-main" disabled={busy} onClick={() => act('closeBidding')}>🔨 Close bidding</button>
+                <button type="button" data-kbd="t" data-kbd-label="T" data-kbd-name="+10 seconds" className="btn" disabled={busy} onClick={() => act('extend', { seconds: 10 })}>+10 seconds</button>
+                <button type="button" data-kbd="shift+z" data-kbd-label="Z" data-kbd-name="Undo last bid" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: confirmUndoBid })}>↶ Undo last bid</button>
+                <button type="button" data-kbd="shift+x" data-kbd-label="X" data-kbd-name="Reset all bids" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('resetBids', {}, { confirm: confirmReset })}>⟲ Reset all bids</button>
+                <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot', {}, { confirm: { title: 'Withdraw this player?', message: 'All bids on this lot are discarded and the player returns to the queue.', tone: 'warning', confirmLabel: 'Withdraw' } })}>Withdraw</button>
+              </>
+            )}
+            {live && phase === 'awaiting' && (
+              <>
+                <button type="button" data-kbd="shift+s" data-kbd-label="S" data-kbd-name="Confirm SOLD" className="btn ok dock-main" disabled={busy || !leader} onClick={() => act('confirmSale', {}, { ok: 'Sold!' })}>
+                  ✓ Confirm SOLD{leader ? ` to ${leader.shortName || leader.name} · ${money(lot.amount, state.currency)}` : ''}
+                </button>
+                <button type="button" data-kbd="r" data-kbd-label="R" data-kbd-name="Reopen bidding" className="btn" disabled={busy} onClick={() => act('reopenBidding')}>Reopen bidding</button>
+                <button type="button" data-kbd="shift+z" data-kbd-label="Z" data-kbd-name="Undo last bid" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: confirmUndoBid })}>↶ Undo last bid</button>
+                <button type="button" data-kbd="shift+x" data-kbd-label="X" data-kbd-name="Reset all bids" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('resetBids', {}, { confirm: confirmReset })}>⟲ Reset all bids</button>
+                <button type="button" data-kbd="shift+u" data-kbd-label="U" data-kbd-name="Mark unsold" className="btn danger" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: { title: 'Mark unsold?', message: 'Bidding is over and this player is marked unsold.', tone: 'warning', confirmLabel: 'Mark unsold' } })}>✕ Mark unsold</button>
+              </>
+            )}
+            {ended && <span className="dock-note">Auction ended. Use “Assign unsold players” below, or Report &amp; PDF for the results.</span>}
+          </div>
+          {live && phase === 'awaiting' && !leader && <p className="dock-hint">No bids were placed. Mark the player unsold or reopen bidding.</p>}
+          {lot?.player && !lot.player.tier && ['reveal', 'bidding'].includes(lot.phase) && (
+            <p className="dock-hint">⚠ {lot.player.name} has no tier, so he opens at the default base {money(lot.base ?? lot.player.basePrice, state.currency)}.</p>
+          )}
+        </div>
+
+        <div className="dock-global">
+          <div className="dock-k">Auction</div>
+          <div className="dock-btns">
+            {live && !state.paused && <button type="button" data-kbd="p" data-kbd-label="P" data-kbd-name="Pause" className="btn" disabled={busy} onClick={() => act('pause')}>❚❚ Pause</button>}
+            {live && state.paused && <button type="button" data-kbd="p" data-kbd-label="P" data-kbd-name="Resume" className="btn ok" disabled={busy} onClick={() => act('resume')}>▶ Resume</button>}
+            <button type="button" className="btn" disabled={busy || phase === 'bidding'} onClick={() => act('setMode', { mode: state.mode === 'online' ? 'manual' : 'online' })}>
+              {state.mode === 'online' ? 'Go manual' : 'Go online'}
+            </button>
+            <button type="button" className="btn" disabled={busy || open || !state.recentSales.length} onClick={() => act('undoLastSale', {}, { confirm: { title: 'Undo the last sale?', message: 'The player goes back into the pool and the team gets its money back.', tone: 'warning', confirmLabel: 'Undo sale' }, ok: 'Sale undone' })}>↶ Undo last sale</button>
+            <button type="button" className="btn" disabled={busy || open || !state.stats.unsold} onClick={() => act('startUnsoldRound', {}, { confirm: { title: 'Start an unsold round?', message: 'All unsold players go back into the queue for another round.', confirmLabel: 'Start round' } })}>↻ Unsold round</button>
+            {live && <button type="button" className="btn danger dock-end" disabled={busy || open} onClick={() => act('end', {}, { confirm: { title: 'End the auction?', message: 'Bidding stops. You can still undo sales and export the results afterwards.', tone: 'danger', confirmLabel: 'End auction' } })}>■ End auction</button>}
+          </div>
+        </div>
+      </section>
+
+      {/* 3 · screens & sound: one tidy row */}
+      <section className="ctl-tools" aria-label="Screens and sound">
         <AuctionProgress state={state} compact />
-        {viewers && <span className="chip">👁 {viewers.public} viewers · {viewers.captains} captains</span>}
         <span className="chip ctl-presence"><JoinedStrip state={state} presence={presence} label="Teams online" /></span>
-        {lot?.player && !lot.player.tier && ['reveal', 'bidding'].includes(lot.phase) && (
-          <span className="chip ctl-warn" title="This player has no tier, so he opens at the default base price from Rules & views. Set his tier on the Players page.">⚠ {lot.player.name}: no tier → opens at default base {money(lot.base ?? lot.player.basePrice, state.currency)}</span>
-        )}
         <UpNextControl />
         <ScreensaverControl />
         <SoundCheckButton />
-        <JoinMoment state={state} joinEvent={joinEvent} presence={presence} compact />
-        {state && <SaleMoments state={state} compact />}
-        {state && <UnsoldMoment state={state} compact />}
-        {state && <PositionIntro state={state} compact />}
-      </div>
-
-      <div className="card ctl-global" style={{ marginBottom: 14 }}>
-        <div className="ctl-actions">
-          {!live && <button type="button" className="btn ok" disabled={busy} onClick={() => act('start', {}, { ok: 'Auction is live' })}>▶ Start auction</button>}
-          {live && !state.paused && <button type="button" data-kbd="p" data-kbd-label="P" data-kbd-name="Pause" className="btn" disabled={busy} onClick={() => act('pause')}>❚❚ Pause</button>}
-          {live && state.paused && <button type="button" data-kbd="p" data-kbd-label="P" data-kbd-name="Resume" className="btn ok" disabled={busy} onClick={() => act('resume')}>▶ Resume</button>}
-          <button type="button" className="btn" disabled={busy || phase === 'bidding'} onClick={() => act('setMode', { mode: state.mode === 'online' ? 'manual' : 'online' })}>
-            {state.mode === 'online' ? 'Go manual (room)' : 'Go online'}
-          </button>
-          <button type="button" className="btn" disabled={busy || open || !state.recentSales.length} onClick={() => act('undoLastSale', {}, { confirm: { title: 'Undo the last sale?', message: 'The player goes back into the pool and the team gets its money back.', tone: 'warning', confirmLabel: 'Undo sale' }, ok: 'Sale undone' })}>↶ Undo last sale</button>
-          <button type="button" className="btn" disabled={busy || open || !state.stats.unsold} onClick={() => act('startUnsoldRound', {}, { confirm: { title: 'Start an unsold round?', message: 'All unsold players go back into the queue for another round.', confirmLabel: 'Start round' } })}>↻ Unsold round</button>
-          {live && <button type="button" className="btn danger" disabled={busy || open} onClick={() => act('end', {}, { confirm: { title: 'End the auction?', message: 'Bidding stops. You can still undo sales and export the results afterwards.', tone: 'danger', confirmLabel: 'End auction' } })}>■ End auction</button>}
-        </div>
-      </div>
+      </section>
 
       <PlayerSlider state={state} busy={busy} canLoad={live && !open} onLoad={(id) => act('loadLot', { playerId: id })} />
 
-      <div className="cols-2">
+      {/* 4 · the player on the block + room / proxy entry | teams, sales, queue */}
+      <div className="cols-2 ctl-main">
         <div className="stack">
-          <div className="card stack ctl-lot">
+          <div className="card ctl-lot">
             <LotStage state={state} now={now} />
-
-            {/* Phase-specific controls */}
-            {live && !open && (
-              <div className="ctl-actions">
-                <button type="button" data-kbd="n" data-kbd-label="N" data-kbd-name="Next player" className="btn primary big-confirm" disabled={busy || !queue.length} onClick={() => act('loadLot')}>
-                  Next player{queue[0] ? `: ${queue[0].name}` : ''}
-                </button>
-                <select className="input" value={pick} onChange={(e) => setPick(e.target.value)}>
-                  <option value="">…or pick a player</option>
-                  {queue.map((p) => <option key={p.id} value={p.id}>{POS_SHORT[p.position]} · {p.name}</option>)}
-                  {(state.unsold || []).map((p) => <option key={p.id} value={p.id}>UNSOLD · {p.name}</option>)}
-                </select>
-                <button type="button" className="btn" disabled={busy || !pick} onClick={() => { act('loadLot', { playerId: pick }); setPick(''); }}>Load picked player</button>
-              </div>
-            )}
-
-            {phase === 'reveal' && (
-              <div className="ctl-actions">
-                <button type="button" data-kbd="o" data-kbd-label="O" data-kbd-name="Open bidding" className="btn primary big-confirm" disabled={busy || state.paused} onClick={() => act('openBidding')}>🔨 Open bidding</button>
-                <button type="button" data-kbd="shift+u" data-kbd-label="U" data-kbd-name="Mark unsold" className="btn" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: { title: 'Mark unsold?', message: 'This player is marked unsold without any bidding.', tone: 'warning', confirmLabel: 'Mark unsold' } })}>Mark unsold</button>
-                <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot')}>Withdraw (back to queue)</button>
-              </div>
-            )}
-
-            {phase === 'bidding' && (
-              <div className="ctl-actions">
-                <button type="button" data-kbd="c" data-kbd-label="C" data-kbd-name="Close bidding" className="btn gold big-confirm" disabled={busy} onClick={() => act('closeBidding')}>🔨 Close bidding</button>
-                <button type="button" data-kbd="t" data-kbd-label="T" data-kbd-name="+10 seconds" className="btn" disabled={busy} onClick={() => act('extend', { seconds: 10 })}>+10 seconds</button>
-                <button type="button" data-kbd="shift+z" data-kbd-label="Z" data-kbd-name="Undo last bid" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: { title: 'Undo the last bid?', message: 'The latest bid is removed and the previous bidder leads again.', tone: 'warning', confirmLabel: 'Undo bid' } })}>↶ Undo last bid</button>
-                <button type="button" data-kbd="shift+x" data-kbd-label="X" data-kbd-name="Reset all bids" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('resetBids', {}, { confirm: { title: 'Reset ALL bids on this player?', message: 'Every bid is wiped: the player goes back to his base price with no leader and bidding restarts with a fresh timer.', tone: 'danger', confirmLabel: 'Reset all bids' } })}>⟲ Reset all bids</button>
-                <button type="button" className="btn ghost" disabled={busy} onClick={() => act('withdrawLot', {}, { confirm: { title: 'Withdraw this player?', message: 'All bids on this lot are discarded and the player returns to the queue.', tone: 'warning', confirmLabel: 'Withdraw' } })}>Withdraw lot</button>
-              </div>
-            )}
-
-            {phase === 'awaiting' && (
-              <div className="stack">
-                <div className="ctl-actions">
-                  <button type="button" data-kbd="shift+s" data-kbd-label="S" data-kbd-name="Confirm SOLD" className="btn ok big-confirm" disabled={busy || !leader} onClick={() => act('confirmSale', {}, { ok: 'Sold!' })}>
-                    ✓ Confirm SOLD{leader ? ` to ${leader.shortName || leader.name} for ${money(lot.amount, state.currency)}` : ''}
-                  </button>
-                  <button type="button" data-kbd="r" data-kbd-label="R" data-kbd-name="Reopen bidding" className="btn" disabled={busy} onClick={() => act('reopenBidding')}>Reopen bidding</button>
-                  <button type="button" data-kbd="shift+z" data-kbd-label="Z" data-kbd-name="Undo last bid" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('undoLastBid', {}, { confirm: { title: 'Undo the last bid?', message: 'The latest bid is removed and the previous bidder leads again.', tone: 'warning', confirmLabel: 'Undo bid' } })}>↶ Undo last bid</button>
-                <button type="button" data-kbd="shift+x" data-kbd-label="X" data-kbd-name="Reset all bids" className="btn" disabled={busy || !lot.bidCount} onClick={() => act('resetBids', {}, { confirm: { title: 'Reset ALL bids on this player?', message: 'Every bid is wiped: the player goes back to his base price with no leader and bidding restarts with a fresh timer.', tone: 'danger', confirmLabel: 'Reset all bids' } })}>⟲ Reset all bids</button>
-                  <button type="button" data-kbd="shift+u" data-kbd-label="U" data-kbd-name="Mark unsold" className="btn danger" disabled={busy} onClick={() => act('markUnsold', {}, { confirm: { title: 'Mark unsold?', message: 'Bidding is over and this player is marked unsold.', tone: 'warning', confirmLabel: 'Mark unsold' } })}>✕ Mark unsold</button>
-                </div>
-                {!leader && <p className="muted small" style={{ margin: 0 }}>No bids were placed. Mark the player unsold or reopen bidding.</p>}
-              </div>
-            )}
-
-            {(phase === 'bidding' || phase === 'awaiting' || (phase === 'reveal' && state.mode === 'manual')) && (
-              <div className="card" style={{ background: 'var(--bg-2)' }}>
-                <h2>{state.mode === 'manual' ? 'Record result from the room' : 'Bid on behalf of a team'}</h2>
-                <div className="form-grid">
-                  <Field label="Team">
-                    <select className="input" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-                      <option value="">Choose team…</option>
-                      {state.teams.map((t) => <option key={t.id} value={t.id}>{t.name} (max {money(t.maxBid, state.currency)})</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Amount"><MoneyInput value={amount} onChange={setAmount} /></Field>
-                </div>
-                <div className="row wrap" style={{ marginTop: 10 }}>
-                  {phase === 'bidding' && (
-                    <button type="button" className="btn" disabled={busy || !teamId || !amount} onClick={() => act('proxyBid', { teamId, amount: Number(amount), lotSeq: lot.seq }, { ok: 'Bid placed' })}>Place bid</button>
-                  )}
-                  <button
-                    type="button"
-                    className="btn ok"
-                    disabled={busy || !teamId || !amount}
-                    onClick={() => {
-                      const t = teamById(state, teamId);
-                      act('manualSale', { teamId, amount: Number(amount) }, { confirm: { title: 'Confirm sale', message: `${lot.player?.name} → ${t?.name} for ${money(amount, state.currency)}.`, confirmLabel: 'Confirm sold' }, ok: 'Sold!' });
-                    }}
-                  >
-                    ✓ Confirm sold to this team
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
-          {(state.status === 'ended' || (live && !open)) && <AssignPanel state={state} busy={busy} act={act} />}
+
+          {(phase === 'bidding' || phase === 'awaiting' || (phase === 'reveal' && state.mode === 'manual')) && (
+            <div className="card ctl-proxy">
+              <h2>{state.mode === 'manual' ? 'Record result from the room' : 'Bid on behalf of a team'}</h2>
+              <div className="form-grid">
+                <Field label="Team">
+                  <select className="input" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+                    <option value="">Choose team…</option>
+                    {state.teams.map((t) => <option key={t.id} value={t.id}>{t.name} (max {money(t.maxBid, state.currency)})</option>)}
+                  </select>
+                </Field>
+                <Field label="Amount"><MoneyInput value={amount} onChange={setAmount} /></Field>
+              </div>
+              <div className="row wrap" style={{ marginTop: 10 }}>
+                {phase === 'bidding' && (
+                  <button type="button" className="btn" disabled={busy || !teamId || !amount} onClick={() => act('proxyBid', { teamId, amount: Number(amount), lotSeq: lot.seq }, { ok: 'Bid placed' })}>Place bid</button>
+                )}
+                <button
+                  type="button"
+                  className="btn ok"
+                  disabled={busy || !teamId || !amount}
+                  onClick={() => {
+                    const t = teamById(state, teamId);
+                    act('manualSale', { teamId, amount: Number(amount) }, { confirm: { title: 'Confirm sale', message: `${lot.player?.name} → ${t?.name} for ${money(amount, state.currency)}.`, confirmLabel: 'Confirm sold' }, ok: 'Sold!' });
+                  }}
+                >
+                  ✓ Confirm sold to this team
+                </button>
+              </div>
+            </div>
+          )}
+          {(ended || (live && !open)) && <AssignPanel state={state} busy={busy} act={act} />}
         </div>
 
         <div className="stack">
@@ -381,6 +409,6 @@ export default function Control() {
         <PurseStrip state={state} />
       </div>
       <SoundDock state={state} sound={snd} surface="admin" />
-    </>
+    </div>
   );
 }

@@ -206,3 +206,57 @@ tr:hover .tn-edit, .tn-edit:focus-visible { opacity: 1; }
 .ctl-presence .js-team .team-logo { width: 22px !important; height: 22px !important; }
 .ctl-presence .js-row { gap: 3px; }
 .chip.ctl-warn { background: rgba(245, 158, 11, 0.16); border-color: #f59e0b; color: #fcd34d; font-weight: 700; }
+
+
+/* ================= control room v2: header · command dock · tools · content ================= */
+.ctl-head { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 12px; }
+.admin-main .ctl-head h1.ctl-h1 { margin: 0; }
+.ctl-status { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1 1 auto; min-width: 0; }
+.ctl-status .chip { font-size: 11px; }
+.ctl-status .st-conn.ok { color: #86efac; }
+.ctl-status .st-conn.bad { color: #fca5a5; }
+.ctl-status .st-bidding, .ctl-status .st-reveal, .ctl-status .st-awaiting { color: #86efac; border-color: rgba(43, 213, 118, .45); }
+.ctl-status .st-paused { color: var(--amber, #f59e0b); border-color: rgba(245, 158, 11, .5); }
+
+.ctl-dock { position: sticky; top: 0; z-index: 30; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 0; margin: 0 0 12px; background: #0f0f12; border: 1px solid var(--rule-2, rgba(255, 255, 255, .12)); border-radius: 6px; box-shadow: 0 16px 30px -22px #000; }
+.ctl-dock::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 6px 0 0 6px; background: var(--dock-c, #6b6760); }
+.ctl-dock.tone-bidding { --dock-c: #22c55e; }
+.ctl-dock.tone-reveal { --dock-c: #3b82f6; }
+.ctl-dock.tone-awaiting { --dock-c: #f5c542; }
+.ctl-dock.tone-paused { --dock-c: #f59e0b; }
+.dock-lot, .dock-global { padding: 12px 16px 14px 20px; min-width: 0; }
+.dock-global { border-left: 1px solid var(--rule, rgba(255, 255, 255, .08)); padding-left: 16px; }
+.dock-k { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); min-width: 0; white-space: nowrap; }
+.dock-k .dock-phase { color: var(--bone); }
+.dock-k .dock-who { color: var(--dim); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.dock-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--dock-c, #6b6760); box-shadow: 0 0 0 4px color-mix(in srgb, var(--dock-c, #6b6760) 22%, transparent); }
+.tone-bidding .dock-dot { animation: dock-pulse 1.4s ease-out infinite; }
+@keyframes dock-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dock-c) 60%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.dock-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.dock-btns .btn { min-height: 44px; padding: 8px 14px; font-size: 12px; line-height: 1.15; border-radius: 4px; white-space: nowrap; }
+.dock-btns .dock-main { min-height: 58px; padding: 10px 22px; font-size: 18px; letter-spacing: .04em; }
+.dock-global .dock-btns .btn { min-height: 44px; font-size: 11.5px; padding: 8px 12px; }
+.dock-global .dock-end { margin-left: auto; }
+.dock-pick { display: inline-flex; gap: 6px; align-items: stretch; }
+.dock-pick .input { min-width: 220px; height: auto; min-height: 44px; }
+.dock-hint { margin: 10px 0 0; font-size: 12.5px; color: var(--amber, #f59e0b); }
+.dock-note { align-self: center; font-size: 13px; color: var(--dim); }
+@media (max-width: 1180px) {
+  .ctl-dock { grid-template-columns: 1fr; }
+  .dock-global { border-left: 0; border-top: 1px solid var(--rule, rgba(255, 255, 255, .08)); padding: 10px 16px 12px 20px; }
+}
+@media (max-width: 600px) { .dock-btns .btn { flex: 1 1 calc(50% - 8px); } .dock-btns .dock-main { flex: 1 1 100%; } .dock-pick { flex: 1 1 100%; } .dock-pick .input { flex: 1; min-width: 0; } }
+
+.ctl-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--rule, rgba(255, 255, 255, .08)); border-radius: 6px; background: rgba(255, 255, 255, .015); }
+.ctl-tools .ap.compact { margin: 0; }
+.ctl-lot .empty-stage { padding: 18px 6px; }
+.ctl-lot .empty-stage .display { font-size: clamp(30px, 3.4vw, 48px) !important; }
+.ctl-main { margin-top: 0; }
+/* dock polish: global buttons on a fixed 3-column grid (End auction always bottom-right), tighter phase buttons */
+.dock-global .dock-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dock-global .dock-btns .btn { white-space: normal; text-align: center; justify-content: center; }
+.dock-global .dock-end { margin-left: 0; grid-column: 3; }
+.dock-btns .btn.ghost { border: 1px solid var(--rule-2, rgba(255, 255, 255, .14)); }
+.dock-lot .dock-btns .btn:not(.dock-main) { padding: 8px 12px; font-size: 11.5px; }
+.dock-btns .dock-main { font-size: 17px; padding: 10px 20px; }
+@media (max-width: 600px) { .dock-global .dock-btns { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dock-global .dock-end { grid-column: auto; } }
