@@ -5,7 +5,7 @@ import { money, teamById } from '../lib/format.js';
 import LotStage, { SoldOverlay } from '../components/LotStage.jsx';
 import { PurseStrip, SquadCard } from '../components/Teams.jsx';
 import {
-  Avatar, MiniPlayer, Spinner, TeamLogo,
+  Avatar, MiniPlayer, Spinner,
 } from '../components/ui.jsx';
 import { BrandMark } from '../components/Nav.jsx';
 import TeamReveal from '../components/TeamReveal.jsx';

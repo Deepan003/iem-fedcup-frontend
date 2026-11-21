@@ -22,7 +22,6 @@ export default function Indicators({ state, now }) {
   const stungSeq = useRef(null);
 
   const live = lot && ['bidding', 'awaiting'].includes(lot.phase);
-  const amount = lot?.amount ?? lot?.base ?? 0;
   const pos = lot?.player?.position;
   const tier = lot?.player?.tier;
   const recAll = records?.overall;

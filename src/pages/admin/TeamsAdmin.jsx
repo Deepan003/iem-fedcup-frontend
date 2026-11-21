@@ -1,7 +1,7 @@
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
-import { money, POSITIONS, POS_SHORT } from '../../lib/format.js';
+import { money, POSITIONS } from '../../lib/format.js';
 import {
   Field, MoneyInput, Spinner, TeamLogo, Toggle, useAction, logoTransform,
 } from '../../components/ui.jsx';
@@ -32,9 +32,6 @@ function TeamEditor({
   const [form, setForm] = useState({ ...team, budget: team.budget ?? '' });
   const [password, setPassword] = useState(null);
   const [adjusting, setAdjusting] = useState(autoAdjust);
-  const [ret, setRet] = useState({
-    playerId: '', name: '', position: 'Forward', price: '',
-  });
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }));
 
   const save = () => run(async () => {
@@ -47,8 +44,6 @@ function TeamEditor({
     onSaved();
   }, 'Team saved');
 
-  const retained = (liveTeam?.squad || []).filter((p) => p.retained);
-  const pool = players.filter((p) => ['available', 'unsold', 'withheld'].includes(p.status));
 
   return (
     <div id={`team-${team.id}`} className="card stack team-card" style={{ borderColor: form.color }}>

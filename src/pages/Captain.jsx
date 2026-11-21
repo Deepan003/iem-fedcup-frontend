@@ -1,8 +1,8 @@
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  api, assetUrl, explain, session,
+  api, explain, session,
 } from '../lib/api.js';
 import { useAuction } from '../lib/auction.js';
 import { money, POS_SHORT, teamById } from '../lib/format.js';
